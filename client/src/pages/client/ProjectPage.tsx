@@ -1,61 +1,25 @@
 import { useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { api } from '../../lib/api';
-import type { ProjectDetail, Comment } from '@clientspace/shared';
-import { Button, Card, EmptyState, Input, LoadingSkeleton, PageHeader, StatusBadge } from '../../components/ui';
-
-function TaskComments({ taskId }: { taskId: string }) {
-  const queryClient = useQueryClient();
-  const [body, setBody] = useState('');
-
-  const { data: comments } = useQuery({
-    queryKey: ['comments', taskId],
-    queryFn: () => api<Comment[]>(`/tasks/${taskId}/comments`),
-  });
-
-  const mutation = useMutation({
-    mutationFn: () =>
-      api(`/tasks/${taskId}/comments`, {
-        method: 'POST',
-        body: JSON.stringify({ body }),
-      }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['comments', taskId] });
-      setBody('');
-    },
-  });
-
-  return (
-    <div className="mt-3 space-y-2">
-      {comments?.map((c) => (
-        <div key={c.id} className="rounded-lg bg-slate-50 px-3 py-2 text-sm">
-          <span className="font-medium">{c.user?.name}</span>
-          <span className="ml-2 text-xs text-slate-400">{new Date(c.created_at).toLocaleString()}</span>
-          <p className="mt-1">{c.body}</p>
-        </div>
-      ))}
-      <form
-        onSubmit={(e) => {
-          e.preventDefault();
-          if (body.trim()) mutation.mutate();
-        }}
-        className="flex gap-2"
-      >
-        <Input
-          placeholder="Leave a comment..."
-          value={body}
-          onChange={(e) => setBody(e.target.value)}
-        />
-        <Button type="submit" disabled={mutation.isPending}>Post</Button>
-      </form>
-    </div>
-  );
-}
+import { ArrowLeft, Download, ListTodo, Paperclip } from 'lucide-react';
+import { api, apiUpload } from '@/lib/api';
+import type { ProjectDetail, ProjectFile } from '@clientspace/shared';
+import { PageHeader } from '@/components/app/page-header';
+import { StatusBadge } from '@/components/app/status-badge';
+import { EmptyState } from '@/components/app/empty-state';
+import { PageSkeleton } from '@/components/app/loading';
+import { Panel } from '@/components/app/panel';
+import { FormAlert } from '@/components/app/query-error';
+import { FileUploadZone } from '@/components/app/file-upload-zone';
+import { TaskRowClient } from '@/components/app/task-row';
+import { ButtonLink, ButtonAnchor } from '@/components/ui/button-link';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 export default function ClientProjectPage() {
   const { id } = useParams<{ id: string }>();
+  const queryClient = useQueryClient();
   const [expandedTask, setExpandedTask] = useState<string | null>(null);
+  const [error, setError] = useState('');
 
   const { data: project, isLoading } = useQuery({
     queryKey: ['client', 'projects', id],
@@ -63,86 +27,117 @@ export default function ClientProjectPage() {
     enabled: !!id,
   });
 
-  if (isLoading) return <LoadingSkeleton rows={6} />;
+  const uploadFile = useMutation({
+    mutationFn: (file: File) => apiUpload<ProjectFile>(`/projects/${id}/files`, file),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['client', 'projects', id] }),
+    onError: (err) => setError(err instanceof Error ? err.message : 'Upload failed'),
+  });
+
+  if (isLoading) return <PageSkeleton rows={6} />;
   if (!project) return <EmptyState message="Project not found" />;
 
   return (
     <div>
       <PageHeader title={project.title}>
-        <Link to="/client/dashboard">
-          <Button variant="secondary">Back</Button>
-        </Link>
+        <ButtonLink variant="outline" to="/client/dashboard">
+          <ArrowLeft className="size-4" /> Back
+        </ButtonLink>
       </PageHeader>
 
-      <div className="mb-6">
+      {error && <FormAlert message={error} />}
+
+      <div className="mb-6 flex flex-wrap items-center gap-3">
         <StatusBadge status={project.status} />
-        {project.description && (
-          <p className="mt-4 text-sm text-slate-600">{project.description}</p>
+        {project.target_date && (
+          <span className="text-[13px] text-muted-foreground">
+            Target {new Date(project.target_date).toLocaleDateString()}
+          </span>
         )}
       </div>
 
-      <div className="grid gap-8 lg:grid-cols-3">
-        <div className="lg:col-span-2">
-          <h2 className="mb-4 text-lg font-semibold">Tasks</h2>
-          {!project.tasks?.length ? (
-            <EmptyState message="No tasks yet." />
-          ) : (
-            <div className="space-y-3">
-              {project.tasks.map((task) => (
-                <Card key={task.id}>
-                  <div className="flex items-center gap-2">
-                    <span className="font-medium">{task.title}</span>
-                    <StatusBadge status={task.status} />
-                  </div>
-                  {task.due_date && (
-                    <p className="mt-1 text-xs text-slate-500">
-                      Due {new Date(task.due_date).toLocaleDateString()}
-                    </p>
-                  )}
-                  <button
-                    type="button"
-                    onClick={() => setExpandedTask(expandedTask === task.id ? null : task.id)}
-                    className="mt-2 text-xs text-indigo-600 hover:underline"
-                  >
-                    {expandedTask === task.id ? 'Hide comments' : 'Comments'}
-                  </button>
-                  {expandedTask === task.id && <TaskComments taskId={task.id} />}
-                </Card>
-              ))}
-            </div>
-          )}
-        </div>
+      {project.description && (
+        <p className="mb-6 max-w-prose text-[13px] leading-relaxed text-muted-foreground">
+          {project.description}
+        </p>
+      )}
 
-        <div>
-          <h2 className="mb-4 text-lg font-semibold">Files</h2>
-          {!project.files?.length ? (
-            <EmptyState message="No files shared yet." />
-          ) : (
-            <Card className="divide-y divide-slate-100 p-0">
-              {project.files.map((f) => (
-                <div key={f.id} className="flex items-center justify-between px-6 py-4">
-                  <div>
-                    <p className="font-medium text-sm">{f.name}</p>
-                    <p className="text-xs text-slate-400">
-                      {(f.size_bytes / 1024).toFixed(1)} KB
-                    </p>
-                  </div>
-                  {f.download_url && (
-                    <a
-                      href={f.download_url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-sm text-indigo-600 hover:underline"
-                    >
-                      Download
-                    </a>
-                  )}
-                </div>
-              ))}
-            </Card>
-          )}
-        </div>
-      </div>
+      <Tabs defaultValue="tasks" className="space-y-6">
+        <TabsList>
+          <TabsTrigger value="tasks">
+            <ListTodo className="size-4" /> Tasks
+          </TabsTrigger>
+          <TabsTrigger value="files">
+            <Paperclip className="size-4" /> Files
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="tasks">
+          <Panel title="Tasks">
+            {!project.tasks?.length ? (
+              <EmptyState icon={ListTodo} message="No tasks yet." className="py-8" />
+            ) : (
+              <ul className="divide-y divide-border">
+                {project.tasks.map((task) => (
+                  <TaskRowClient
+                    key={task.id}
+                    task={task}
+                    expanded={expandedTask === task.id}
+                    onToggleComments={() =>
+                      setExpandedTask(expandedTask === task.id ? null : task.id)
+                    }
+                  />
+                ))}
+              </ul>
+            )}
+          </Panel>
+        </TabsContent>
+
+        <TabsContent value="files">
+          <Panel title="Shared files">
+            <FileUploadZone
+              className="mb-4"
+              uploading={uploadFile.isPending}
+              label="Upload a file"
+              onFile={(f) => uploadFile.mutate(f)}
+            />
+
+            {!project.files?.length ? (
+              <EmptyState
+                icon={Paperclip}
+                message="No files yet. Upload briefs, assets, or feedback here."
+                className="py-8"
+              />
+            ) : (
+              <ul className="divide-y divide-border">
+                {project.files.map((f) => (
+                  <li
+                    key={f.id}
+                    className="flex items-center justify-between gap-3 py-3 first:pt-0 last:pb-0"
+                  >
+                    <div className="min-w-0">
+                      <p className="truncate text-[13px] font-medium">{f.name}</p>
+                      <p className="text-[13px] text-muted-foreground">
+                        {(f.size_bytes / 1024).toFixed(1)} KB
+                      </p>
+                    </div>
+                    {f.download_url && (
+                      <ButtonAnchor
+                        variant="outline"
+                        size="sm"
+                        href={f.download_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                        <Download className="size-4" /> Download
+                      </ButtonAnchor>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </Panel>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }

@@ -1,48 +1,91 @@
 import { Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { api } from '../../lib/api';
+import { Plus, FolderKanban } from 'lucide-react';
+import { api } from '@/lib/api';
 import type { Project, Client } from '@clientspace/shared';
-import { Button, Card, EmptyState, LoadingSkeleton, PageHeader, StatusBadge } from '../../components/ui';
+import { PageHeader } from '@/components/app/page-header';
+import { StatusBadge } from '@/components/app/status-badge';
+import { EmptyState } from '@/components/app/empty-state';
+import { PageSkeleton } from '@/components/app/loading';
+import { Panel } from '@/components/app/panel';
+import { QueryError } from '@/components/app/query-error';
+import { ButtonLink } from '@/components/ui/button-link';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
 
 type ProjectWithClient = Project & { clients: Pick<Client, 'id' | 'name' | 'company'> };
 
 export default function ProjectsListPage() {
-  const { data: projects, isLoading } = useQuery({
+  const { data: projects, isLoading, isError } = useQuery({
     queryKey: ['projects'],
     queryFn: () => api<ProjectWithClient[]>('/projects'),
   });
 
   return (
     <div>
-      <PageHeader title="Projects">
-        <Link to="/projects/new">
-          <Button>New Project</Button>
-        </Link>
+      <PageHeader title="Projects" description="All active client projects">
+        <ButtonLink to="/projects/new">
+          <Plus className="size-4" /> New project
+        </ButtonLink>
       </PageHeader>
 
       {isLoading ? (
-        <LoadingSkeleton />
+        <PageSkeleton />
+      ) : isError ? (
+        <QueryError message="Could not load projects. Refresh to try again." />
       ) : !projects?.length ? (
-        <EmptyState message="No projects yet. Create one to get started." />
+        <EmptyState
+          icon={FolderKanban}
+          title="No projects"
+          message="Create a project and assign it to a client."
+          action={
+            <ButtonLink size="sm" to="/projects/new">
+              Create project
+            </ButtonLink>
+          }
+        />
       ) : (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {projects.map((p) => (
-            <Link key={p.id} to={`/projects/${p.id}`}>
-              <Card className="h-full transition hover:border-indigo-200 hover:shadow-md">
-                <div className="mb-2 flex items-start justify-between gap-2">
-                  <h3 className="font-medium text-slate-900">{p.title}</h3>
-                  <StatusBadge status={p.status} />
-                </div>
-                <p className="text-sm text-slate-500">{p.clients?.name}</p>
-                {p.target_date && (
-                  <p className="mt-2 text-xs text-slate-400">
-                    Target: {new Date(p.target_date).toLocaleDateString()}
-                  </p>
-                )}
-              </Card>
-            </Link>
-          ))}
-        </div>
+        <Panel title={`${projects.length} project${projects.length === 1 ? '' : 's'}`} bodyClassName="p-0">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Project</TableHead>
+                <TableHead className="hidden sm:table-cell">Client</TableHead>
+                <TableHead className="hidden md:table-cell">Target</TableHead>
+                <TableHead>Status</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {projects.map((p) => (
+                <TableRow key={p.id}>
+                  <TableCell>
+                    <Link
+                      to={`/projects/${p.id}`}
+                      className="font-medium text-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 rounded-sm"
+                    >
+                      {p.title}
+                    </Link>
+                  </TableCell>
+                  <TableCell className="hidden text-muted-foreground sm:table-cell">
+                    {p.clients?.name}
+                  </TableCell>
+                  <TableCell className="hidden text-muted-foreground md:table-cell">
+                    {p.target_date ? new Date(p.target_date).toLocaleDateString() : '—'}
+                  </TableCell>
+                  <TableCell>
+                    <StatusBadge status={p.status} />
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </Panel>
       )}
     </div>
   );

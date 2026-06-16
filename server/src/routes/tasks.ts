@@ -4,6 +4,8 @@ import { authenticate, requireAdmin } from '../middleware/auth.js';
 
 const router = Router();
 
+const TASK_PRIORITIES = ['Low', 'Medium', 'High', 'Urgent'] as const;
+
 router.get('/:projectId/tasks', authenticate, requireAdmin, async (req, res) => {
   const { data, error } = await supabaseAdmin
     .from('tasks')
@@ -16,8 +18,12 @@ router.get('/:projectId/tasks', authenticate, requireAdmin, async (req, res) => 
 });
 
 router.post('/:projectId/tasks', authenticate, requireAdmin, async (req, res) => {
-  const { title, description, status, due_date } = req.body;
+  const { title, description, status, priority, start_date, due_date } = req.body;
   if (!title) return res.status(400).json({ error: 'Title is required' });
+
+  if (priority && !TASK_PRIORITIES.includes(priority)) {
+    return res.status(400).json({ error: 'Invalid priority' });
+  }
 
   const { data: existing } = await supabaseAdmin
     .from('tasks')
@@ -35,6 +41,8 @@ router.post('/:projectId/tasks', authenticate, requireAdmin, async (req, res) =>
       title,
       description: description || null,
       status: status || 'To Do',
+      priority: priority || 'Medium',
+      start_date: start_date || null,
       due_date: due_date || null,
       sort_order,
     })
@@ -61,11 +69,18 @@ router.patch('/reorder', authenticate, requireAdmin, async (req, res) => {
 });
 
 router.patch('/:id', authenticate, requireAdmin, async (req, res) => {
-  const { title, description, status, due_date, sort_order } = req.body;
+  const { title, description, status, priority, start_date, due_date, sort_order } = req.body;
+
+  if (priority !== undefined && !TASK_PRIORITIES.includes(priority)) {
+    return res.status(400).json({ error: 'Invalid priority' });
+  }
+
   const updates: Record<string, unknown> = {};
   if (title !== undefined) updates.title = title;
   if (description !== undefined) updates.description = description;
   if (status !== undefined) updates.status = status;
+  if (priority !== undefined) updates.priority = priority;
+  if (start_date !== undefined) updates.start_date = start_date;
   if (due_date !== undefined) updates.due_date = due_date;
   if (sort_order !== undefined) updates.sort_order = sort_order;
 

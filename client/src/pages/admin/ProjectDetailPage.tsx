@@ -1,72 +1,29 @@
 import { useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { api, apiUpload } from '../../lib/api';
-import type { ProjectDetail, Task, TaskStatus, Comment, ProjectFile, ProjectStatus } from '@clientspace/shared';
-import {
-  Button, Card, EmptyState, ErrorMessage, Input, LoadingSkeleton,
-  PageHeader, Select, StatusBadge,
-} from '../../components/ui';
+import { ChevronDown, ChevronUp, Trash2, Download, ListTodo, Paperclip } from 'lucide-react';
+import { api, apiUpload } from '@/lib/api';
+import type { ProjectDetail, Task, ProjectFile, ProjectStatus } from '@clientspace/shared';
+import { PageHeader } from '@/components/app/page-header';
+import { StatusBadge } from '@/components/app/status-badge';
+import { EmptyState } from '@/components/app/empty-state';
+import { PageSkeleton } from '@/components/app/loading';
+import { Panel } from '@/components/app/panel';
+import { FormAlert } from '@/components/app/query-error';
+import { FileUploadZone } from '@/components/app/file-upload-zone';
+import { TaskCreateForm } from '@/components/app/task-create-form';
+import { TaskRowAdmin } from '@/components/app/task-row';
+import { Button } from '@/components/ui/button';
+import { ButtonAnchor } from '@/components/ui/button-link';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
-const TASK_STATUSES: TaskStatus[] = ['To Do', 'In Progress', 'Done'];
 const PROJECT_STATUSES: ProjectStatus[] = ['Planning', 'In Progress', 'Review', 'Done'];
-
-function TaskComments({ taskId }: { taskId: string }) {
-  const queryClient = useQueryClient();
-  const [body, setBody] = useState('');
-
-  const { data: comments } = useQuery({
-    queryKey: ['comments', taskId],
-    queryFn: () => api<Comment[]>(`/tasks/${taskId}/comments`),
-  });
-
-  const mutation = useMutation({
-    mutationFn: () =>
-      api(`/tasks/${taskId}/comments`, {
-        method: 'POST',
-        body: JSON.stringify({ body }),
-      }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['comments', taskId] });
-      setBody('');
-    },
-  });
-
-  return (
-    <div className="mt-3 border-t border-slate-100 pt-3">
-      <div className="mb-2 space-y-2">
-        {comments?.map((c) => (
-          <div key={c.id} className="rounded-lg bg-slate-50 px-3 py-2 text-sm">
-            <span className="font-medium">{c.user?.name}</span>
-            <span className="ml-2 text-xs text-slate-400">{new Date(c.created_at).toLocaleString()}</span>
-            <p className="mt-1 text-slate-700">{c.body}</p>
-          </div>
-        ))}
-      </div>
-      <form
-        onSubmit={(e) => {
-          e.preventDefault();
-          if (body.trim()) mutation.mutate();
-        }}
-        className="flex gap-2"
-      >
-        <input
-          className="flex-1 rounded-lg border border-slate-300 px-3 py-1.5 text-sm"
-          placeholder="Add a comment..."
-          value={body}
-          onChange={(e) => setBody(e.target.value)}
-        />
-        <Button type="submit" disabled={mutation.isPending}>Post</Button>
-      </form>
-    </div>
-  );
-}
 
 export default function ProjectDetailPage() {
   const { id } = useParams<{ id: string }>();
   const queryClient = useQueryClient();
   const [expandedTask, setExpandedTask] = useState<string | null>(null);
-  const [newTaskTitle, setNewTaskTitle] = useState('');
   const [error, setError] = useState('');
 
   const { data: project, isLoading } = useQuery({
@@ -87,15 +44,9 @@ export default function ProjectDetailPage() {
   });
 
   const addTask = useMutation({
-    mutationFn: () =>
-      api<Task>(`/projects/${id}/tasks`, {
-        method: 'POST',
-        body: JSON.stringify({ title: newTaskTitle }),
-      }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['projects', id] });
-      setNewTaskTitle('');
-    },
+    mutationFn: (body: Record<string, unknown>) =>
+      api<Task>(`/projects/${id}/tasks`, { method: 'POST', body: JSON.stringify(body) }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['projects', id] }),
     onError: (err) => setError(err instanceof Error ? err.message : 'Failed to add task'),
   });
 
@@ -121,195 +72,178 @@ export default function ProjectDetailPage() {
     const idx = tasks.findIndex((t) => t.id === task.id);
     const swapIdx = direction === 'up' ? idx - 1 : idx + 1;
     if (swapIdx < 0 || swapIdx >= tasks.length) return;
-
     const items = tasks.map((t, i) => {
       if (i === idx) return { id: t.id, sort_order: swapIdx };
       if (i === swapIdx) return { id: t.id, sort_order: idx };
       return { id: t.id, sort_order: t.sort_order };
     });
-
     api('/tasks/reorder', { method: 'PATCH', body: JSON.stringify({ items }) }).then(() => {
       queryClient.invalidateQueries({ queryKey: ['projects', id] });
     });
   };
 
-  if (isLoading) return <LoadingSkeleton rows={6} />;
+  if (isLoading) return <PageSkeleton rows={8} />;
   if (!project) return <EmptyState message="Project not found" />;
 
   return (
     <div>
-      <PageHeader title={project.title}>
-        <div className="flex gap-2">
+      <PageHeader title={project.title} description={project.client?.name}>
+        <div className="flex flex-wrap items-center gap-2">
           <Select
             value={project.status}
-            onChange={(e) => updateProject.mutate({ status: e.target.value as ProjectStatus })}
+            onValueChange={(v) => v && updateProject.mutate({ status: v as ProjectStatus })}
           >
-            {PROJECT_STATUSES.map((s) => (
-              <option key={s} value={s}>{s}</option>
-            ))}
+            <SelectTrigger className="w-[160px]">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {PROJECT_STATUSES.map((s) => (
+                <SelectItem key={s} value={s}>
+                  {s}
+                </SelectItem>
+              ))}
+            </SelectContent>
           </Select>
           {!project.archived && (
-            <Button variant="secondary" onClick={() => archiveProject.mutate()}>
+            <Button variant="outline" onClick={() => archiveProject.mutate()}>
               Archive
             </Button>
           )}
         </div>
       </PageHeader>
 
-      {error && <div className="mb-4"><ErrorMessage message={error} /></div>}
+      {error && <FormAlert message={error} />}
 
       <div className="mb-6 flex flex-wrap items-center gap-3">
         <StatusBadge status={project.status} />
-        {project.client && (
-          <span className="text-sm text-slate-500">Client: {project.client.name}</span>
-        )}
         {project.target_date && (
-          <span className="text-sm text-slate-500">
-            Target: {new Date(project.target_date).toLocaleDateString()}
+          <span className="text-[13px] text-muted-foreground">
+            Target {new Date(project.target_date).toLocaleDateString()}
           </span>
         )}
       </div>
 
       {project.description && (
-        <Card className="mb-8">
-          <p className="text-sm text-slate-700">{project.description}</p>
-        </Card>
+        <p className="mb-6 max-w-prose text-[13px] leading-relaxed text-muted-foreground">
+          {project.description}
+        </p>
       )}
 
-      <div className="grid gap-8 lg:grid-cols-3">
-        <div className="lg:col-span-2">
-          <h2 className="mb-4 text-lg font-semibold">Tasks</h2>
-          <Card>
-            <form
-              onSubmit={(e) => {
-                e.preventDefault();
-                if (newTaskTitle.trim()) addTask.mutate();
-              }}
-              className="mb-4 flex gap-2"
-            >
-              <Input
-                placeholder="New task title..."
-                value={newTaskTitle}
-                onChange={(e) => setNewTaskTitle(e.target.value)}
-              />
-              <Button type="submit" disabled={addTask.isPending}>Add</Button>
-            </form>
+      <Tabs defaultValue="tasks" className="space-y-6">
+        <TabsList>
+          <TabsTrigger value="tasks">
+            <ListTodo className="size-4" /> Tasks
+          </TabsTrigger>
+          <TabsTrigger value="files">
+            <Paperclip className="size-4" /> Files
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="tasks">
+          <Panel title="Task list">
+            <TaskCreateForm
+              pending={addTask.isPending}
+              onSubmit={(task) => addTask.mutate(task)}
+            />
 
             {!project.tasks?.length ? (
-              <EmptyState message="No tasks yet." />
+              <EmptyState icon={ListTodo} message="No tasks yet. Add one above." className="py-8" />
             ) : (
-              <div className="space-y-2">
+              <ul className="divide-y divide-border">
                 {project.tasks.map((task, idx) => (
-                  <div key={task.id} className="rounded-lg border border-slate-200 p-4">
-                    <div className="flex items-start gap-3">
-                      <div className="flex flex-col gap-1">
-                        <button
+                  <TaskRowAdmin
+                    key={task.id}
+                    task={task}
+                    expanded={expandedTask === task.id}
+                    onToggleComments={() =>
+                      setExpandedTask(expandedTask === task.id ? null : task.id)
+                    }
+                    onUpdate={(updates) => updateTask.mutate({ taskId: task.id, updates })}
+                    reorder={
+                      <div className="flex flex-col gap-0.5">
+                        <Button
                           type="button"
+                          variant="ghost"
+                          size="icon-sm"
                           onClick={() => moveTask(task, 'up')}
                           disabled={idx === 0}
-                          className="text-xs text-slate-400 hover:text-slate-600 disabled:opacity-30"
+                          aria-label="Move task up"
                         >
-                          ▲
-                        </button>
-                        <button
+                          <ChevronUp className="size-4" />
+                        </Button>
+                        <Button
                           type="button"
+                          variant="ghost"
+                          size="icon-sm"
                           onClick={() => moveTask(task, 'down')}
                           disabled={idx === (project.tasks?.length ?? 0) - 1}
-                          className="text-xs text-slate-400 hover:text-slate-600 disabled:opacity-30"
+                          aria-label="Move task down"
                         >
-                          ▼
-                        </button>
+                          <ChevronDown className="size-4" />
+                        </Button>
                       </div>
-                      <div className="flex-1">
-                        <div className="flex flex-wrap items-center gap-2">
-                          <span className="font-medium">{task.title}</span>
-                          <Select
-                            value={task.status}
-                            onChange={(e) =>
-                              updateTask.mutate({ taskId: task.id, updates: { status: e.target.value as TaskStatus } })
-                            }
-                            className="w-auto text-xs"
-                          >
-                            {TASK_STATUSES.map((s) => (
-                              <option key={s} value={s}>{s}</option>
-                            ))}
-                          </Select>
-                          <Input
-                            type="date"
-                            value={task.due_date || ''}
-                            onChange={(e) =>
-                              updateTask.mutate({ taskId: task.id, updates: { due_date: e.target.value || null } })
-                            }
-                            className="w-auto text-xs"
-                          />
-                        </div>
-                        <button
-                          type="button"
-                          onClick={() => setExpandedTask(expandedTask === task.id ? null : task.id)}
-                          className="mt-1 text-xs text-indigo-600 hover:underline"
-                        >
-                          {expandedTask === task.id ? 'Hide comments' : 'Comments'}
-                        </button>
-                        {expandedTask === task.id && <TaskComments taskId={task.id} />}
-                      </div>
-                    </div>
-                  </div>
+                    }
+                  />
                 ))}
-              </div>
+              </ul>
             )}
-          </Card>
-        </div>
+          </Panel>
+        </TabsContent>
 
-        <div>
-          <h2 className="mb-4 text-lg font-semibold">Files</h2>
-          <Card>
-            <label className="mb-4 flex cursor-pointer items-center justify-center rounded-lg border-2 border-dashed border-slate-300 px-4 py-6 text-sm text-slate-500 hover:border-indigo-300 hover:text-indigo-600">
-              <input
-                type="file"
-                className="hidden"
-                onChange={(e) => {
-                  const file = e.target.files?.[0];
-                  if (file) uploadFile.mutate(file);
-                  e.target.value = '';
-                }}
-              />
-              {uploadFile.isPending ? 'Uploading...' : 'Click to upload'}
-            </label>
+        <TabsContent value="files">
+          <Panel title="Shared files">
+            <FileUploadZone
+              className="mb-4"
+              uploading={uploadFile.isPending}
+              onFile={(f) => uploadFile.mutate(f)}
+            />
 
             {!project.files?.length ? (
-              <EmptyState message="No files uploaded." />
+              <EmptyState icon={Paperclip} message="No files uploaded yet." className="py-8" />
             ) : (
-              <ul className="space-y-2">
+              <ul className="divide-y divide-border">
                 {project.files.map((f) => (
-                  <li key={f.id} className="flex items-center justify-between rounded-lg bg-slate-50 px-3 py-2 text-sm">
-                    <div>
-                      <p className="font-medium">{f.name}</p>
-                      <p className="text-xs text-slate-400">
-                        {(f.size_bytes / 1024).toFixed(1)} KB · {new Date(f.created_at).toLocaleDateString()}
+                  <li
+                    key={f.id}
+                    className="flex items-center justify-between gap-3 py-3 first:pt-0 last:pb-0"
+                  >
+                    <div className="min-w-0">
+                      <p className="truncate text-[13px] font-medium">{f.name}</p>
+                      <p className="text-[13px] text-muted-foreground">
+                        {(f.size_bytes / 1024).toFixed(1)} KB ·{' '}
+                        {new Date(f.created_at).toLocaleDateString()}
                       </p>
                     </div>
-                    <div className="flex gap-2">
+                    <div className="flex shrink-0 gap-1">
                       {f.download_url && (
-                        <a
+                        <ButtonAnchor
+                          variant="ghost"
+                          size="icon-sm"
                           href={f.download_url}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="text-sm text-indigo-600 hover:underline"
+                          aria-label={`Download ${f.name}`}
                         >
-                          Download
-                        </a>
+                          <Download className="size-4" />
+                        </ButtonAnchor>
                       )}
-                      <Button variant="danger" onClick={() => deleteFile.mutate(f.id)}>
-                        Delete
+                      <Button
+                        variant="ghost"
+                        size="icon-sm"
+                        className="text-destructive"
+                        onClick={() => deleteFile.mutate(f.id)}
+                        aria-label={`Delete ${f.name}`}
+                      >
+                        <Trash2 className="size-4" />
                       </Button>
                     </div>
                   </li>
                 ))}
               </ul>
             )}
-          </Card>
-        </div>
-      </div>
+          </Panel>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }

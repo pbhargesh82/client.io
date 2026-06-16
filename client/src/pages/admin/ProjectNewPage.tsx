@@ -1,9 +1,19 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation } from '@tanstack/react-query';
-import { api } from '../../lib/api';
+import { ArrowLeft } from 'lucide-react';
+import { api } from '@/lib/api';
 import type { Client, ProjectStatus } from '@clientspace/shared';
-import { Button, Card, ErrorMessage, Input, PageHeader, Select, Textarea } from '../../components/ui';
+import { PageHeader } from '@/components/app/page-header';
+import { FormPanel } from '@/components/app/panel';
+import { FormAlert } from '@/components/app/query-error';
+import { FormActions } from '@/components/app/form-actions';
+import { Button } from '@/components/ui/button';
+import { ButtonLink } from '@/components/ui/button-link';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 const STATUSES: ProjectStatus[] = ['Planning', 'In Progress', 'Review', 'Done'];
 
@@ -41,9 +51,15 @@ export default function ProjectNewPage() {
 
   return (
     <div>
-      <PageHeader title="New Project" />
-      {error && <div className="mb-4"><ErrorMessage message={error} /></div>}
-      <Card className="max-w-lg">
+      <PageHeader title="New project" description="Create a project and assign it to a client">
+        <ButtonLink variant="outline" to="/projects">
+          <ArrowLeft className="size-4" /> Back
+        </ButtonLink>
+      </PageHeader>
+
+      {error && <FormAlert message={error} />}
+
+      <FormPanel title="Project details">
         <form
           onSubmit={(e) => {
             e.preventDefault();
@@ -51,33 +67,64 @@ export default function ProjectNewPage() {
           }}
           className="space-y-4"
         >
-          <Input label="Title" value={title} onChange={(e) => setTitle(e.target.value)} required />
-          <Textarea label="Description" value={description} onChange={(e) => setDescription(e.target.value)} />
-          <Select label="Client" value={clientId} onChange={(e) => setClientId(e.target.value)} required>
-            <option value="">Select a client</option>
-            {clients?.map((c) => (
-              <option key={c.id} value={c.id}>{c.name}</option>
-            ))}
-          </Select>
-          <Select label="Status" value={status} onChange={(e) => setStatus(e.target.value as ProjectStatus)}>
-            {STATUSES.map((s) => (
-              <option key={s} value={s}>{s}</option>
-            ))}
-          </Select>
-          <div className="grid gap-4 sm:grid-cols-2">
-            <Input label="Start Date" type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} />
-            <Input label="Target Date" type="date" value={targetDate} onChange={(e) => setTargetDate(e.target.value)} />
+          <div className="space-y-1.5">
+            <Label className="text-[13px]">Title</Label>
+            <Input value={title} onChange={(e) => setTitle(e.target.value)} required />
           </div>
-          <div className="flex gap-3">
+          <div className="space-y-1.5">
+            <Label className="text-[13px]">Description</Label>
+            <Textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={3} />
+          </div>
+          <div className="space-y-1.5">
+            <Label className="text-[13px]">Client</Label>
+            <Select value={clientId} onValueChange={(v) => v && setClientId(v)} required>
+              <SelectTrigger>
+                <SelectValue placeholder="Select a client" />
+              </SelectTrigger>
+              <SelectContent>
+                {clients?.map((c) => (
+                  <SelectItem key={c.id} value={c.id}>
+                    {c.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-1.5">
+            <Label className="text-[13px]">Status</Label>
+            <Select value={status} onValueChange={(v) => setStatus(v as ProjectStatus)}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {STATUSES.map((s) => (
+                  <SelectItem key={s} value={s}>
+                    {s}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="space-y-1.5">
+              <Label className="text-[13px]">Start date</Label>
+              <Input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} />
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-[13px]">Target date</Label>
+              <Input type="date" value={targetDate} onChange={(e) => setTargetDate(e.target.value)} />
+            </div>
+          </div>
+          <FormActions>
             <Button type="submit" disabled={mutation.isPending || !clientId}>
-              {mutation.isPending ? 'Creating...' : 'Create Project'}
+              {mutation.isPending ? 'Creating…' : 'Create project'}
             </Button>
-            <Button type="button" variant="secondary" onClick={() => navigate('/projects')}>
+            <Button type="button" variant="outline" onClick={() => navigate('/projects')}>
               Cancel
             </Button>
-          </div>
+          </FormActions>
         </form>
-      </Card>
+      </FormPanel>
     </div>
   );
 }

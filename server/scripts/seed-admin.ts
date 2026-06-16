@@ -3,7 +3,7 @@
  * Bootstrap the first admin user.
  * Usage: npx tsx scripts/seed-admin.ts admin@example.com "Admin Name" "password123"
  */
-import 'dotenv/config';
+import '../src/load-env.js';
 import { createClient } from '@supabase/supabase-js';
 
 const [email, name, password] = process.argv.slice(2);

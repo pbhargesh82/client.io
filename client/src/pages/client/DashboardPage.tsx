@@ -1,80 +1,122 @@
-import { Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { api } from '../../lib/api';
+import { FolderKanban } from 'lucide-react';
+import { api } from '@/lib/api';
+import { formatRelativeTime } from '@/lib/format';
+import { getFirstName, getTimeGreeting } from '@/lib/greeting';
 import type { ClientDashboard } from '@clientspace/shared';
-import { Card, EmptyState, LoadingSkeleton, PageHeader, StatusBadge } from '../../components/ui';
+import { useAuth } from '@/hooks/useAuth';
+import { StatusBadge } from '@/components/app/status-badge';
+import { PriorityBadge } from '@/components/app/priority-badge';
+import { EmptyState } from '@/components/app/empty-state';
+import { PageSkeleton } from '@/components/app/loading';
+import { Panel } from '@/components/app/panel';
+import { QueryError } from '@/components/app/query-error';
+import { ListLinkRow } from '@/components/app/list-link-row';
 
 export default function ClientDashboardPage() {
-  const { data, isLoading } = useQuery({
+  const { name } = useAuth();
+  const firstName = getFirstName(name);
+
+  const { data, isLoading, isError } = useQuery({
     queryKey: ['client', 'dashboard'],
     queryFn: () => api<ClientDashboard>('/client/dashboard'),
   });
 
-  if (isLoading) return <LoadingSkeleton rows={6} />;
+  if (isLoading) return <PageSkeleton rows={6} />;
+  if (isError) return <QueryError message="Could not load your dashboard. Refresh to try again." />;
+
+  const hasProjects = (data?.projects?.length ?? 0) > 0;
 
   return (
-    <div>
-      <PageHeader title="Your Projects" />
+    <div className="space-y-8">
+      <header>
+        <h1 className="text-xl font-semibold tracking-tight md:text-2xl">
+          {firstName ? `${getTimeGreeting()}, ${firstName}` : 'Your projects'}
+        </h1>
+        <p className="mt-1 max-w-lg text-[13px] leading-relaxed text-muted-foreground md:text-sm">
+          {hasProjects
+            ? 'Progress, tasks, and shared files for everything in flight.'
+            : 'Your agency will add projects here when work begins.'}
+        </p>
+      </header>
 
-      {!data?.projects?.length ? (
-        <EmptyState message="No projects assigned yet. Your agency will add projects here." />
+      {!hasProjects ? (
+        <EmptyState
+          icon={FolderKanban}
+          title="No projects yet"
+          message="When your agency starts work, you'll see status updates and deliverables here."
+        />
       ) : (
-        <div className="mb-10 grid gap-4 sm:grid-cols-2">
-          {data.projects.map((p) => (
-            <Link key={p.id} to={`/client/projects/${p.id}`}>
-              <Card className="transition hover:border-indigo-200 hover:shadow-md">
-                <div className="flex items-start justify-between">
-                  <h3 className="font-medium text-slate-900">{p.title}</h3>
-                  <StatusBadge status={p.status} />
-                </div>
-                {p.description && (
-                  <p className="mt-2 text-sm text-slate-500 line-clamp-2">{p.description}</p>
-                )}
-              </Card>
-            </Link>
-          ))}
-        </div>
+        <Panel title="Projects">
+          <ul className="-mx-1">
+            {data!.projects.map((p) => (
+              <li key={p.id}>
+                <ListLinkRow
+                  to={`/client/projects/${p.id}`}
+                  title={p.title}
+                  subtitle={p.description || undefined}
+                  trailing={<StatusBadge status={p.status} />}
+                />
+              </li>
+            ))}
+          </ul>
+        </Panel>
       )}
 
-      <div className="grid gap-8 lg:grid-cols-2">
-        <div>
-          <h2 className="mb-4 text-lg font-semibold">Upcoming Tasks</h2>
-          {!data?.upcoming_tasks?.length ? (
-            <EmptyState message="No upcoming tasks." />
-          ) : (
-            <Card className="divide-y divide-slate-100 p-0">
-              {data.upcoming_tasks.map((t) => (
-                <div key={t.id} className="px-6 py-4">
-                  <p className="font-medium text-slate-900">{t.title}</p>
-                  <p className="text-sm text-slate-500">
-                    {t.project_title}
-                    {t.due_date && ` · Due ${new Date(t.due_date).toLocaleDateString()}`}
-                  </p>
-                  <StatusBadge status={t.status} />
-                </div>
-              ))}
-            </Card>
-          )}
-        </div>
+      {hasProjects && (
+        <div className="grid gap-6 lg:grid-cols-2">
+          <Panel title="Upcoming tasks">
+            {!data?.upcoming_tasks?.length ? (
+              <p className="text-[13px] text-muted-foreground">No upcoming tasks.</p>
+            ) : (
+              <ul className="divide-y divide-border">
+                {data.upcoming_tasks.map((t) => (
+                  <li
+                    key={t.id}
+                    className="flex items-start justify-between gap-3 py-3 first:pt-0 last:pb-0"
+                  >
+                  <div className="min-w-0">
+                    <p className="text-[13px] font-medium">{t.title}</p>
+                    <p className="text-[13px] text-muted-foreground">
+                      {t.project_title}
+                      {t.due_date && (
+                        <>
+                          <span aria-hidden> · </span>
+                          Ends {new Date(t.due_date).toLocaleDateString()}
+                        </>
+                      )}
+                    </p>
+                  </div>
+                  <div className="flex shrink-0 flex-col items-end gap-1">
+                    <StatusBadge status={t.status} />
+                    {t.priority && <PriorityBadge priority={t.priority} />}
+                  </div>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </Panel>
 
-        <div>
-          <h2 className="mb-4 text-lg font-semibold">Recent Files</h2>
-          {!data?.recent_files?.length ? (
-            <EmptyState message="No files shared yet." />
-          ) : (
-            <Card className="divide-y divide-slate-100 p-0">
-              {data.recent_files.map((f) => (
-                <div key={f.id} className="px-6 py-4">
-                  <p className="font-medium text-slate-900">{f.name}</p>
-                  <p className="text-sm text-slate-500">
-                    {f.project_title} · {new Date(f.created_at).toLocaleDateString()}
-                  </p>
-                </div>
-              ))}
-            </Card>
-          )}
+          <Panel title="Recent files">
+            {!data?.recent_files?.length ? (
+              <p className="text-[13px] text-muted-foreground">No files shared yet.</p>
+            ) : (
+              <ul className="divide-y divide-border">
+                {data.recent_files.map((f) => (
+                  <li key={f.id} className="py-3 first:pt-0 last:pb-0">
+                    <p className="text-[13px] font-medium">{f.name}</p>
+                    <p className="text-[13px] text-muted-foreground">
+                      {f.project_title}
+                      <span aria-hidden> · </span>
+                      <time dateTime={f.created_at}>{formatRelativeTime(f.created_at)}</time>
+                    </p>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </Panel>
         </div>
-      </div>
+      )}
     </div>
   );
 }

@@ -2,9 +2,14 @@ node_modules/
 dist/
 .env
 .env.local
+TEST_CREDENTIALS.local.md
 *.log
 .DS_Store
+.cursor/
+.impeccable/
 client/dist/
 server/dist/
+.netlify/
+client/.netlify/
 supabase/.branches
 supabase/.temp

@@ -38,12 +38,18 @@ router.get('/:projectId/files', authenticate, async (req, res) => {
 router.post(
   '/:projectId/files',
   authenticate,
-  requireAdmin,
   upload.single('file'),
   async (req, res) => {
+    const projectId = String(req.params.projectId);
+
+    if (!isAdmin(req)) {
+      const allowed = await clientCanAccessProject(req.user!.id, projectId);
+      if (!allowed) return res.status(403).json({ error: 'Access denied' });
+    }
+
     if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
 
-    const storagePath = `${req.params.projectId}/${uuidv4()}-${req.file.originalname}`;
+    const storagePath = `${projectId}/${uuidv4()}-${req.file.originalname}`;
 
     const { error: uploadError } = await supabaseAdmin.storage
       .from(STORAGE_BUCKET)
@@ -57,7 +63,7 @@ router.post(
     const { data, error } = await supabaseAdmin
       .from('files')
       .insert({
-        project_id: req.params.projectId,
+        project_id: projectId,
         name: req.file.originalname,
         size_bytes: req.file.size,
         storage_path: storagePath,

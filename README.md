@@ -10,8 +10,8 @@ A dual-role client portal for freelancers and agencies. Admins manage clients, p
 
 ## Docs
 
-- [CLIENT_PORTAL_MVP.md](./CLIENT_PORTAL_MVP.md) — product spec
-- [CLIENT_PORTAL_PLAN.md](./CLIENT_PORTAL_PLAN.md) — implementation plan & task list
+- [PRODUCT.md](./PRODUCT.md) — product context
+- [DESIGN.md](./DESIGN.md) — design system
 
 ## Local development
 
@@ -52,10 +52,23 @@ curl http://localhost:3001/health
 
 ## Deploy
 
-- **Frontend:** Netlify (`netlify.toml` included)
-- **API:** Railway (`railway.json` included) or Render
-- Set env vars from `.env.example` files in each environment
-- Configure Supabase Auth redirect URLs for production domains
+### Frontend (Netlify)
+
+1. Connect this repo in [Netlify](https://app.netlify.com) — build settings are in `netlify.toml`.
+2. Set **Site environment variables** (Site settings → Environment variables):
+
+   | Variable | Example |
+   |----------|---------|
+   | `VITE_SUPABASE_URL` | `https://xxxx.supabase.co` |
+   | `VITE_SUPABASE_ANON_KEY` | Supabase anon key |
+   | `VITE_API_URL` | Your production API URL (Railway/Render) |
+
+3. In Supabase → Authentication → URL configuration, add your Netlify URL to **Site URL** and **Redirect URLs**.
+
+### API (Railway)
+
+- `railway.json` configures the Express API. Set env vars from `server/.env.example`.
+- Set `CORS_ORIGIN` to your Netlify URL (comma-separated if multiple).
 
 ## Scripts
 

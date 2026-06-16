@@ -14,4 +14,21 @@ export default defineConfig({
   server: {
     port: 5173,
   },
+  optimizeDeps: {
+    include: [
+      'lucide-react',
+      'sonner',
+      'next-themes',
+      'class-variance-authority',
+      'clsx',
+      'tailwind-merge',
+      '@base-ui/react/button',
+      '@base-ui/react/avatar',
+      '@base-ui/react/separator',
+      '@base-ui/react/input',
+      '@base-ui/react/dialog',
+      '@base-ui/react/select',
+      '@base-ui/react/tabs',
+    ],
+  },
 })

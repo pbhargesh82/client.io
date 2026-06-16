@@ -4,6 +4,8 @@ export type ProjectStatus = 'Planning' | 'In Progress' | 'Review' | 'Done';
 
 export type TaskStatus = 'To Do' | 'In Progress' | 'Done';
 
+export type TaskPriority = 'Low' | 'Medium' | 'High' | 'Urgent';
+
 export interface User {
   id: string;
   email: string;
@@ -40,6 +42,8 @@ export interface Task {
   title: string;
   description: string | null;
   status: TaskStatus;
+  priority: TaskPriority;
+  start_date: string | null;
   due_date: string | null;
   sort_order: number;
   created_at: string;

@@ -1,8 +1,16 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { api } from '../../lib/api';
-import { Button, Card, ErrorMessage, Input, PageHeader } from '../../components/ui';
+import { ArrowLeft, Copy, Check } from 'lucide-react';
+import { api } from '@/lib/api';
+import { PageHeader } from '@/components/app/page-header';
+import { FormPanel } from '@/components/app/panel';
+import { FormAlert } from '@/components/app/query-error';
+import { FormActions } from '@/components/app/form-actions';
+import { Button } from '@/components/ui/button';
+import { ButtonLink } from '@/components/ui/button-link';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 
 export default function ClientNewPage() {
   const navigate = useNavigate();
@@ -13,6 +21,7 @@ export default function ClientNewPage() {
   const [password, setPassword] = useState('');
   const [tempPassword, setTempPassword] = useState<string | null>(null);
   const [error, setError] = useState('');
+  const [copied, setCopied] = useState(false);
 
   const mutation = useMutation({
     mutationFn: () =>
@@ -27,36 +36,62 @@ export default function ClientNewPage() {
       }),
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['clients'] });
-      if (data.temp_password) {
-        setTempPassword(data.temp_password);
-      } else {
-        navigate(`/clients/${data.id}`);
-      }
+      if (data.temp_password) setTempPassword(data.temp_password);
+      else navigate(`/clients/${data.id}`);
     },
     onError: (err) => setError(err instanceof Error ? err.message : 'Failed to create client'),
   });
 
+  const copyCredentials = async () => {
+    if (!tempPassword) return;
+    await navigator.clipboard.writeText(`Email: ${email}\nPassword: ${tempPassword}`);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
   if (tempPassword) {
     return (
       <div>
-        <PageHeader title="Client Created" />
-        <Card>
-          <p className="mb-4 text-slate-700">Share these credentials with your client:</p>
-          <p className="font-mono text-sm"><strong>Email:</strong> {email}</p>
-          <p className="font-mono text-sm"><strong>Password:</strong> {tempPassword}</p>
-          <Button className="mt-6" onClick={() => navigate('/clients')}>
-            Back to Clients
-          </Button>
-        </Card>
+        <PageHeader
+          title="Client created"
+          description="Share these credentials with your client"
+        />
+        <FormPanel title="Portal credentials" description="They can sign in at the client portal">
+          <dl className="space-y-3 text-[13px]">
+            <div>
+              <dt className="text-muted-foreground">Email</dt>
+              <dd className="mt-0.5 font-mono font-medium">{email}</dd>
+            </div>
+            <div>
+              <dt className="text-muted-foreground">Password</dt>
+              <dd className="mt-0.5 font-mono font-medium">{tempPassword}</dd>
+            </div>
+          </dl>
+          <FormActions>
+            <Button type="button" variant="outline" size="sm" onClick={copyCredentials}>
+              {copied ? <Check className="size-4" /> : <Copy className="size-4" />}
+              {copied ? 'Copied' : 'Copy credentials'}
+            </Button>
+            <Button size="sm" onClick={() => navigate('/clients')}>
+              Back to clients
+            </Button>
+          </FormActions>
+        </FormPanel>
       </div>
     );
   }
 
   return (
     <div>
-      <PageHeader title="New Client" />
-      {error && <div className="mb-4"><ErrorMessage message={error} /></div>}
-      <Card className="max-w-lg">
+      <PageHeader title="New client" description="Create a client account with portal access">
+        <ButtonLink variant="outline" to="/clients">
+          <ArrowLeft className="size-4" /> Back
+        </ButtonLink>
+      </PageHeader>
+
+      {error && <FormAlert message={error} />}
+
+      <FormPanel title="Client details">
         <form
           onSubmit={(e) => {
             e.preventDefault();
@@ -64,25 +99,52 @@ export default function ClientNewPage() {
           }}
           className="space-y-4"
         >
-          <Input label="Name" value={name} onChange={(e) => setName(e.target.value)} required />
-          <Input label="Company" value={company} onChange={(e) => setCompany(e.target.value)} />
-          <Input label="Email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
-          <Input
-            label="Password (optional — auto-generated if blank)"
-            type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-          />
-          <div className="flex gap-3">
+          <div className="space-y-1.5">
+            <Label htmlFor="name" className="text-[13px]">
+              Name
+            </Label>
+            <Input id="name" value={name} onChange={(e) => setName(e.target.value)} required />
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="company" className="text-[13px]">
+              Company
+            </Label>
+            <Input id="company" value={company} onChange={(e) => setCompany(e.target.value)} />
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="email" className="text-[13px]">
+              Email
+            </Label>
+            <Input
+              id="email"
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="password" className="text-[13px]">
+              Password <span className="font-normal text-muted-foreground">(optional)</span>
+            </Label>
+            <Input
+              id="password"
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="Auto-generated if blank"
+            />
+          </div>
+          <FormActions>
             <Button type="submit" disabled={mutation.isPending}>
-              {mutation.isPending ? 'Creating...' : 'Create Client'}
+              {mutation.isPending ? 'Creating…' : 'Create client'}
             </Button>
-            <Button type="button" variant="secondary" onClick={() => navigate('/clients')}>
+            <Button type="button" variant="outline" onClick={() => navigate('/clients')}>
               Cancel
             </Button>
-          </div>
+          </FormActions>
         </form>
-      </Card>
+      </FormPanel>
     </div>
   );
 }
