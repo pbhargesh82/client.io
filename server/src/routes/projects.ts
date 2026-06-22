@@ -1,19 +1,9 @@
 import { Router } from 'express';
-import { supabaseAdmin, STORAGE_BUCKET } from '../lib/supabase.js';
+import { supabaseAdmin } from '../lib/supabase.js';
+import { filesWithSignedUrls } from '../lib/fileStorage.js';
 import { authenticate, requireAdmin } from '../middleware/auth.js';
 
 const router = Router();
-
-async function filesWithSignedUrls(files: Array<Record<string, unknown>>) {
-  return Promise.all(
-    files.map(async (file) => {
-      const { data: signed } = await supabaseAdmin.storage
-        .from(STORAGE_BUCKET)
-        .createSignedUrl(file.storage_path as string, 3600);
-      return { ...file, download_url: signed?.signedUrl };
-    })
-  );
-}
 
 router.get('/', authenticate, requireAdmin, async (req, res) => {
   const archived = req.query.archived === 'true';
@@ -71,6 +61,7 @@ router.get('/:id', authenticate, requireAdmin, async (req, res) => {
       .from('files')
       .select('*')
       .eq('project_id', req.params.id)
+      .is('comment_id', null)
       .order('created_at', { ascending: false }),
   ]);
 

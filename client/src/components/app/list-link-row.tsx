@@ -20,21 +20,21 @@ export function ListLinkRow({
     <Link
       to={to}
       className={cn(
-        'group flex items-center justify-between gap-3 rounded-md px-3 py-2.5 transition-colors duration-150',
-        'hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
+        'group flex items-center justify-between gap-3 rounded-md px-3 py-3',
+        'interactive-row',
         className
       )}
     >
       <span className="min-w-0">
         <span className="block truncate text-[13px] font-medium">{title}</span>
         {subtitle && (
-          <span className="block truncate text-[13px] text-muted-foreground">{subtitle}</span>
+          <span className="mt-0.5 block truncate text-[13px] text-muted-foreground">{subtitle}</span>
         )}
       </span>
       <span className="flex shrink-0 items-center gap-2">
         {trailing}
         <ChevronRight
-          className="size-4 text-muted-foreground/40 transition-transform duration-150 group-hover:translate-x-0.5 group-hover:text-muted-foreground"
+          className="size-4 text-muted-foreground/35 transition-transform duration-150 group-hover:translate-x-0.5 group-hover:text-muted-foreground"
           aria-hidden
         />
       </span>

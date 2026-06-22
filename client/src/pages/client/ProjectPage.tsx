@@ -1,24 +1,31 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { ArrowLeft, Download, ListTodo, Paperclip } from 'lucide-react';
+import { ArrowLeft, ListTodo, Paperclip } from 'lucide-react';
 import { api, apiUpload } from '@/lib/api';
 import type { ProjectDetail, ProjectFile } from '@clientspace/shared';
 import { PageHeader } from '@/components/app/page-header';
 import { StatusBadge } from '@/components/app/status-badge';
 import { EmptyState } from '@/components/app/empty-state';
 import { PageSkeleton } from '@/components/app/loading';
-import { Panel } from '@/components/app/panel';
 import { FormAlert } from '@/components/app/query-error';
-import { FileUploadZone } from '@/components/app/file-upload-zone';
-import { TaskRowClient } from '@/components/app/task-row';
-import { ButtonLink, ButtonAnchor } from '@/components/ui/button-link';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { ProjectFilesPanel } from '@/components/app/project-files-panel';
+import {
+  ProjectJumpNav,
+  ProjectSectionTitle,
+  ProjectWorkspace,
+} from '@/components/app/project-workspace';
+import { TaskList, TaskRowClient } from '@/components/app/task-row';
+import { TaskCommentsSheet, TaskDetailSheet } from '@/components/app/task-sheets';
+import { ButtonLink } from '@/components/ui/button-link';
+
+type SheetMode = 'details' | 'comments' | null;
 
 export default function ClientProjectPage() {
   const { id } = useParams<{ id: string }>();
   const queryClient = useQueryClient();
-  const [expandedTask, setExpandedTask] = useState<string | null>(null);
+  const [sheetTaskId, setSheetTaskId] = useState<string | null>(null);
+  const [sheetMode, setSheetMode] = useState<SheetMode>(null);
   const [error, setError] = useState('');
 
   const { data: project, isLoading } = useQuery({
@@ -27,17 +34,38 @@ export default function ClientProjectPage() {
     enabled: !!id,
   });
 
+  const sheetTask = useMemo(
+    () => project?.tasks?.find((t) => t.id === sheetTaskId) ?? null,
+    [project?.tasks, sheetTaskId]
+  );
+
+  const openSheet = (taskId: string, mode: Exclude<SheetMode, null>) => {
+    setSheetTaskId(taskId);
+    setSheetMode(mode);
+  };
+
+  const closeSheet = () => {
+    setSheetTaskId(null);
+    setSheetMode(null);
+  };
+
   const uploadFile = useMutation({
     mutationFn: (file: File) => apiUpload<ProjectFile>(`/projects/${id}/files`, file),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['client', 'projects', id] }),
+    onSuccess: () => {
+      setError('');
+      queryClient.invalidateQueries({ queryKey: ['client', 'projects', id] });
+    },
     onError: (err) => setError(err instanceof Error ? err.message : 'Upload failed'),
   });
 
   if (isLoading) return <PageSkeleton rows={6} />;
   if (!project) return <EmptyState message="Project not found" />;
 
+  const taskCount = project.tasks?.length ?? 0;
+  const fileCount = project.files?.length ?? 0;
+
   return (
-    <div>
+    <div className="page-stack">
       <PageHeader title={project.title}>
         <ButtonLink variant="outline" to="/client/dashboard">
           <ArrowLeft className="size-4" /> Back
@@ -46,7 +74,7 @@ export default function ClientProjectPage() {
 
       {error && <FormAlert message={error} />}
 
-      <div className="mb-6 flex flex-wrap items-center gap-3">
+      <div className="flex flex-wrap items-center gap-3">
         <StatusBadge status={project.status} />
         {project.target_date && (
           <span className="text-[13px] text-muted-foreground">
@@ -56,88 +84,87 @@ export default function ClientProjectPage() {
       </div>
 
       {project.description && (
-        <p className="mb-6 max-w-prose text-[13px] leading-relaxed text-muted-foreground">
+        <p className="max-w-prose text-[13px] leading-relaxed text-muted-foreground">
           {project.description}
         </p>
       )}
 
-      <Tabs defaultValue="tasks" className="space-y-6">
-        <TabsList>
-          <TabsTrigger value="tasks">
-            <ListTodo className="size-4" /> Tasks
-          </TabsTrigger>
-          <TabsTrigger value="files">
-            <Paperclip className="size-4" /> Files
-          </TabsTrigger>
-        </TabsList>
+      <ProjectJumpNav taskCount={taskCount} fileCount={fileCount} />
 
-        <TabsContent value="tasks">
-          <Panel title="Tasks">
+      <ProjectWorkspace
+        tasks={
+          <section aria-labelledby="client-project-tasks-heading">
+            <ProjectSectionTitle
+              id="client-project-tasks-heading"
+              icon={ListTodo}
+              title="Tasks"
+              count={taskCount}
+            />
+
             {!project.tasks?.length ? (
               <EmptyState icon={ListTodo} message="No tasks yet." className="py-8" />
             ) : (
-              <ul className="divide-y divide-border">
+              <TaskList variant="client">
                 {project.tasks.map((task) => (
                   <TaskRowClient
                     key={task.id}
                     task={task}
-                    expanded={expandedTask === task.id}
-                    onToggleComments={() =>
-                      setExpandedTask(expandedTask === task.id ? null : task.id)
-                    }
+                    active={sheetTaskId === task.id}
+                    onView={() => openSheet(task.id, 'details')}
+                    onComments={() => openSheet(task.id, 'comments')}
                   />
                 ))}
-              </ul>
+              </TaskList>
             )}
-          </Panel>
-        </TabsContent>
-
-        <TabsContent value="files">
-          <Panel title="Shared files">
-            <FileUploadZone
-              className="mb-4"
-              uploading={uploadFile.isPending}
-              label="Upload a file"
-              onFile={(f) => uploadFile.mutate(f)}
+          </section>
+        }
+        files={
+          <section aria-labelledby="client-project-files-heading">
+            <ProjectSectionTitle
+              id="client-project-files-heading"
+              icon={Paperclip}
+              title="Files"
+              count={fileCount}
+              className="hidden lg:flex"
             />
+            <h2 className="mb-4 flex items-center gap-2 text-sm font-semibold tracking-tight lg:hidden">
+              <Paperclip className="size-4 text-muted-foreground" aria-hidden />
+              Files
+              <span className="font-normal text-muted-foreground">({fileCount})</span>
+            </h2>
+            <ProjectFilesPanel
+              files={project.files ?? []}
+              canUpload
+              uploading={uploadFile.isPending}
+              uploadError={
+                uploadFile.isError
+                  ? uploadFile.error instanceof Error
+                    ? uploadFile.error.message
+                    : 'Upload failed'
+                  : null
+              }
+              onUpload={(f) => uploadFile.mutateAsync(f)}
+              description="Official project deliverables and documents."
+              uploadLabel="Upload a file"
+            />
+          </section>
+        }
+      />
 
-            {!project.files?.length ? (
-              <EmptyState
-                icon={Paperclip}
-                message="No files yet. Upload briefs, assets, or feedback here."
-                className="py-8"
-              />
-            ) : (
-              <ul className="divide-y divide-border">
-                {project.files.map((f) => (
-                  <li
-                    key={f.id}
-                    className="flex items-center justify-between gap-3 py-3 first:pt-0 last:pb-0"
-                  >
-                    <div className="min-w-0">
-                      <p className="truncate text-[13px] font-medium">{f.name}</p>
-                      <p className="text-[13px] text-muted-foreground">
-                        {(f.size_bytes / 1024).toFixed(1)} KB
-                      </p>
-                    </div>
-                    {f.download_url && (
-                      <ButtonAnchor
-                        variant="outline"
-                        size="sm"
-                        href={f.download_url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                      >
-                        <Download className="size-4" /> Download
-                      </ButtonAnchor>
-                    )}
-                  </li>
-                ))}
-              </ul>
-            )}
-          </Panel>
-        </TabsContent>
-      </Tabs>
+      <TaskDetailSheet
+        task={sheetTask}
+        open={sheetMode === 'details'}
+        onOpenChange={(open) => !open && closeSheet()}
+        onOpenComments={() => {
+          if (sheetTask) openSheet(sheetTask.id, 'comments');
+        }}
+      />
+
+      <TaskCommentsSheet
+        task={sheetTask}
+        open={sheetMode === 'comments'}
+        onOpenChange={(open) => !open && closeSheet()}
+      />
     </div>
   );
 }

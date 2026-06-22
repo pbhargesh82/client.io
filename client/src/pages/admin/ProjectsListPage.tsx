@@ -1,15 +1,16 @@
-import { Link } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { Plus, FolderKanban } from 'lucide-react';
 import { api } from '@/lib/api';
 import type { Project, Client } from '@clientspace/shared';
+import { ProjectCreateSheet } from '@/components/app/admin-entity-sheets';
 import { PageHeader } from '@/components/app/page-header';
 import { StatusBadge } from '@/components/app/status-badge';
 import { EmptyState } from '@/components/app/empty-state';
 import { PageSkeleton } from '@/components/app/loading';
 import { Panel } from '@/components/app/panel';
 import { QueryError } from '@/components/app/query-error';
-import { ButtonLink } from '@/components/ui/button-link';
+import { Button } from '@/components/ui/button';
 import {
   Table,
   TableBody,
@@ -22,17 +23,26 @@ import {
 type ProjectWithClient = Project & { clients: Pick<Client, 'id' | 'name' | 'company'> };
 
 export default function ProjectsListPage() {
+  const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const createOpen = searchParams.get('create') === '1';
+
   const { data: projects, isLoading, isError } = useQuery({
     queryKey: ['projects'],
     queryFn: () => api<ProjectWithClient[]>('/projects'),
   });
 
+  const setCreateOpen = (open: boolean) => {
+    if (open) setSearchParams({ create: '1' });
+    else setSearchParams({});
+  };
+
   return (
-    <div>
+    <div className="page-stack">
       <PageHeader title="Projects" description="All active client projects">
-        <ButtonLink to="/projects/new">
+        <Button size="sm" onClick={() => setCreateOpen(true)}>
           <Plus className="size-4" /> New project
-        </ButtonLink>
+        </Button>
       </PageHeader>
 
       {isLoading ? (
@@ -45,13 +55,17 @@ export default function ProjectsListPage() {
           title="No projects"
           message="Create a project and assign it to a client."
           action={
-            <ButtonLink size="sm" to="/projects/new">
+            <Button size="sm" onClick={() => setCreateOpen(true)}>
               Create project
-            </ButtonLink>
+            </Button>
           }
         />
       ) : (
-        <Panel title={`${projects.length} project${projects.length === 1 ? '' : 's'}`} bodyClassName="p-0">
+        <Panel
+          title={`${projects.length} project${projects.length === 1 ? '' : 's'}`}
+          variant="inset"
+          bodyClassName="overflow-hidden p-0"
+        >
           <Table>
             <TableHeader>
               <TableRow>
@@ -67,7 +81,7 @@ export default function ProjectsListPage() {
                   <TableCell>
                     <Link
                       to={`/projects/${p.id}`}
-                      className="font-medium text-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 rounded-sm"
+                      className="rounded-sm font-medium text-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                     >
                       {p.title}
                     </Link>
@@ -87,6 +101,12 @@ export default function ProjectsListPage() {
           </Table>
         </Panel>
       )}
+
+      <ProjectCreateSheet
+        open={createOpen}
+        onOpenChange={setCreateOpen}
+        onCreated={(projectId) => navigate(`/projects/${projectId}`)}
+      />
     </div>
   );
 }

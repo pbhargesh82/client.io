@@ -1,5 +1,6 @@
 import { Router } from 'express';
-import { supabaseAdmin, STORAGE_BUCKET } from '../lib/supabase.js';
+import { supabaseAdmin } from '../lib/supabase.js';
+import { filesWithSignedUrls } from '../lib/fileStorage.js';
 import { authenticate, requireClient } from '../middleware/auth.js';
 
 const router = Router();
@@ -47,13 +48,16 @@ router.get('/dashboard', authenticate, requireClient, async (req, res) => {
       .from('files')
       .select('*')
       .in('project_id', projectIds)
+      .is('comment_id', null)
       .order('created_at', { ascending: false })
       .limit(10);
 
-    recent_files = (files ?? []).map((f) => ({
+    const filesWithMeta = (files ?? []).map((f) => ({
       ...f,
       project_title: projectMap.get(f.project_id) ?? 'Unknown',
     }));
+
+    recent_files = await filesWithSignedUrls(filesWithMeta);
   }
 
   res.json({ projects: projects ?? [], upcoming_tasks, recent_files });
@@ -93,22 +97,14 @@ router.get('/projects/:id', authenticate, requireClient, async (req, res) => {
       .from('files')
       .select('*')
       .eq('project_id', req.params.id)
+      .is('comment_id', null)
       .order('created_at', { ascending: false }),
   ]);
-
-  const filesWithUrls = await Promise.all(
-    (filesRes.data ?? []).map(async (file) => {
-      const { data: signed } = await supabaseAdmin.storage
-        .from(STORAGE_BUCKET)
-        .createSignedUrl(file.storage_path, 3600);
-      return { ...file, download_url: signed?.signedUrl };
-    })
-  );
 
   res.json({
     ...project,
     tasks: tasksRes.data ?? [],
-    files: filesWithUrls,
+    files: await filesWithSignedUrls(filesRes.data ?? []),
   });
 });
 

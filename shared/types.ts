@@ -50,21 +50,34 @@ export interface Task {
   updated_at: string;
 }
 
+export interface CommentAttachment {
+  id: string;
+  name: string;
+  size_bytes: number;
+  content_type: string | null;
+  created_at: string;
+  download_url?: string;
+}
+
 export interface Comment {
   id: string;
   task_id: string;
   user_id: string;
-  body: string;
+  body: string | null;
   created_at: string;
   user?: Pick<User, 'name' | 'role'>;
+  attachments?: CommentAttachment[];
 }
 
 export interface ProjectFile {
   id: string;
   project_id: string;
+  comment_id?: string | null;
+  task_id?: string | null;
   name: string;
   size_bytes: number;
   storage_path: string;
+  content_type?: string | null;
   uploaded_by: string;
   created_at: string;
   download_url?: string;

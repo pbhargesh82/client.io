@@ -18,7 +18,7 @@ export function SummaryBar({
   if (loading) {
     return (
       <div
-        className={cn('h-11 animate-pulse rounded-lg border bg-muted/40', className)}
+        className={cn('h-[4.5rem] animate-pulse rounded-lg border bg-muted/30', className)}
         aria-busy="true"
         aria-label="Loading summary"
       />
@@ -28,22 +28,32 @@ export function SummaryBar({
   return (
     <dl
       className={cn(
-        'flex flex-wrap items-center gap-x-6 gap-y-2 rounded-lg border bg-card px-4 py-3',
+        'grid grid-cols-2 gap-px overflow-hidden rounded-lg border bg-border sm:grid-cols-4',
         className
       )}
     >
-      {items.map((item) => (
-        <div key={item.label} className="flex items-baseline gap-1.5">
-          <dt className="sr-only">{item.label}</dt>
+      {items.map((item, index) => (
+        <div
+          key={item.label}
+          className={cn(
+            'flex flex-col gap-0.5 bg-card px-4 py-3.5',
+            index === 0 && 'rounded-tl-lg sm:rounded-bl-lg',
+            index === 1 && 'rounded-tr-lg sm:rounded-none',
+            index === items.length - 2 && 'sm:rounded-none',
+            index === items.length - 1 && 'rounded-br-lg rounded-bl-lg sm:rounded-tr-lg sm:rounded-bl-none'
+          )}
+        >
+          <dt className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+            {item.label}
+          </dt>
           <dd
             className={cn(
-              'text-base font-semibold tabular-nums tracking-tight',
+              'text-2xl font-semibold tabular-nums tracking-tight',
               item.emphasis === 'alert' && item.value > 0 && 'text-destructive'
             )}
           >
             {item.value}
           </dd>
-          <dd className="text-[13px] text-muted-foreground">{item.label}</dd>
         </div>
       ))}
     </dl>

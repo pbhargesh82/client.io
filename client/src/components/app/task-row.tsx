@@ -1,134 +1,132 @@
-import type { Task, TaskPriority, TaskStatus } from '@clientspace/shared';
-import { TaskComments } from '@/components/app/task-comments';
+import type { Task } from '@clientspace/shared';
 import { PriorityBadge } from '@/components/app/priority-badge';
 import { StatusBadge } from '@/components/app/status-badge';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import { MessageSquare } from 'lucide-react';
+import { MessageSquare, Pencil } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
-const TASK_STATUSES: TaskStatus[] = ['To Do', 'In Progress', 'Done'];
-const TASK_PRIORITIES: TaskPriority[] = ['Low', 'Medium', 'High', 'Urgent'];
-
-function formatDateRange(start: string | null, end: string | null): string | null {
-  if (!start && !end) return null;
-  const fmt = (d: string) => new Date(d).toLocaleDateString();
-  if (start && end) return `${fmt(start)} – ${fmt(end)}`;
-  if (start) return `Starts ${fmt(start)}`;
-  return `Due ${fmt(end!)}`;
+function formatDueDate(due: string | null): string | null {
+  if (!due) return null;
+  return new Date(due).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
 }
+
+export function TaskList({
+  children,
+  className,
+  variant = 'client',
+}: {
+  children: React.ReactNode;
+  className?: string;
+  variant?: 'admin' | 'client';
+}) {
+  const headerCols =
+    variant === 'admin'
+      ? 'sm:grid-cols-[2rem_minmax(0,1fr)_5.5rem_5rem_4.5rem_4.5rem]'
+      : 'sm:grid-cols-[minmax(0,1fr)_5.5rem_5rem_4.5rem_4.5rem]';
+
+  return (
+    <div
+      className={cn(
+        'overflow-hidden rounded-lg border border-border/80 bg-card',
+        'max-h-[min(70vh,720px)] overflow-y-auto lg:max-h-[calc(100vh-15rem)]',
+        className
+      )}
+    >
+      <div
+        className={cn(
+          'sticky top-0 z-[1] hidden border-b border-border/80 bg-muted/40 px-4 py-2 text-[12px] font-medium text-muted-foreground sm:grid',
+          headerCols
+        )}
+        aria-hidden
+      >
+        {variant === 'admin' && <span />}
+        <span>Task</span>
+        <span className="hidden md:block">Status</span>
+        <span className="hidden lg:block">Priority</span>
+        <span className="hidden lg:block">Due</span>
+        <span className="text-right">Actions</span>
+      </div>
+      <ul role="list">{children}</ul>
+    </div>
+  );
+}
+
+const adminRowGrid =
+  'grid items-center gap-x-3 px-3 py-2.5 sm:px-4 grid-cols-[auto_minmax(0,1fr)_auto] sm:grid-cols-[auto_minmax(0,1fr)_5.5rem_5rem_4.5rem_4.5rem]';
+
+const clientRowGrid =
+  'grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 px-3 py-2.5 sm:grid-cols-[minmax(0,1fr)_5.5rem_5rem_4.5rem_4.5rem] sm:px-4';
 
 export function TaskRowAdmin({
   task,
-  expanded,
-  onToggleComments,
-  onUpdate,
+  onEdit,
+  onComments,
   reorder,
+  isFirst,
+  active,
 }: {
   task: Task;
-  expanded: boolean;
-  onToggleComments: () => void;
-  onUpdate: (updates: Partial<Task>) => void;
+  onEdit: () => void;
+  onComments: () => void;
   reorder?: React.ReactNode;
+  isFirst?: boolean;
+  active?: boolean;
 }) {
+  const dueLabel = formatDueDate(task.due_date);
+
   return (
-    <li className="py-4 first:pt-0 last:pb-0">
-      <div className="flex gap-3">
+    <li className={cn(!isFirst && 'border-t border-border/80')}>
+      <div
+        className={cn(
+          adminRowGrid,
+          'transition-colors duration-150 hover:bg-row-hover',
+          active && 'bg-muted/25'
+        )}
+      >
         {reorder}
-        <div className="min-w-0 flex-1 space-y-3">
-          <div className="flex flex-wrap items-start gap-2">
-            <Input
-              defaultValue={task.title}
-              onBlur={(e) => {
-                if (e.target.value !== task.title) onUpdate({ title: e.target.value });
-              }}
-              className="h-8 max-w-md font-medium"
-              aria-label="Task title"
-            />
-            <Select
-              value={task.status}
-              onValueChange={(v) => v && onUpdate({ status: v as TaskStatus })}
-            >
-              <SelectTrigger className="h-8 w-[130px]">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {TASK_STATUSES.map((s) => (
-                  <SelectItem key={s} value={s}>
-                    {s}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Select
-              value={task.priority ?? 'Medium'}
-              onValueChange={(v) => v && onUpdate({ priority: v as TaskPriority })}
-            >
-              <SelectTrigger className="h-8 w-[110px]">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {TASK_PRIORITIES.map((p) => (
-                  <SelectItem key={p} value={p}>
-                    {p}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+
+        <button
+          type="button"
+          onClick={onEdit}
+          className="min-w-0 truncate text-left text-[13px] font-medium hover:text-primary"
+        >
+          {task.title}
+        </button>
+
+        <div className="hidden md:flex md:items-center">
+          <StatusBadge status={task.status} />
+        </div>
+
+        <div className="hidden lg:flex lg:items-center">
+          <PriorityBadge priority={task.priority ?? 'Medium'} />
+        </div>
+
+        <div className="hidden text-[12px] tabular-nums text-muted-foreground lg:block">
+          {dueLabel ?? '—'}
+        </div>
+
+        <div className="flex items-center justify-end gap-0.5">
+          <div className="flex md:hidden">
+            <StatusBadge status={task.status} />
           </div>
-
-          <Textarea
-            defaultValue={task.description ?? ''}
-            onBlur={(e) => {
-              const val = e.target.value || null;
-              if (val !== (task.description ?? '')) onUpdate({ description: val });
-            }}
-            placeholder="Task description…"
-            rows={2}
-            className="text-[13px]"
-            aria-label="Task description"
-          />
-
-          <div className="flex flex-wrap items-end gap-3">
-            <div className="space-y-1">
-              <Label className="text-[12px] text-muted-foreground">Start</Label>
-              <Input
-                type="date"
-                value={task.start_date || ''}
-                onChange={(e) => onUpdate({ start_date: e.target.value || null })}
-                className="h-8 w-auto"
-              />
-            </div>
-            <div className="space-y-1">
-              <Label className="text-[12px] text-muted-foreground">End</Label>
-              <Input
-                type="date"
-                value={task.due_date || ''}
-                onChange={(e) => onUpdate({ due_date: e.target.value || null })}
-                className="h-8 w-auto"
-              />
-            </div>
-          </div>
-
           <Button
             type="button"
             variant="ghost"
-            size="sm"
-            className="h-8 px-2 text-muted-foreground"
-            onClick={onToggleComments}
+            size="icon-sm"
+            onClick={onEdit}
+            aria-label={`Edit ${task.title}`}
+          >
+            <Pencil className="size-3.5" />
+          </Button>
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon-sm"
+            onClick={onComments}
+            aria-label={`Comments on ${task.title}`}
           >
             <MessageSquare className="size-3.5" />
-            {expanded ? 'Hide comments' : 'Comments'}
           </Button>
-          {expanded && <TaskComments taskId={task.id} />}
         </div>
       </div>
     </li>
@@ -137,42 +135,61 @@ export function TaskRowAdmin({
 
 export function TaskRowClient({
   task,
-  expanded,
-  onToggleComments,
+  onView,
+  onComments,
+  active,
 }: {
   task: Task;
-  expanded: boolean;
-  onToggleComments: () => void;
+  onView: () => void;
+  onComments: () => void;
+  active?: boolean;
 }) {
-  const dateRange = formatDateRange(task.start_date, task.due_date);
+  const dueLabel = formatDueDate(task.due_date);
 
   return (
-    <li className="py-4 first:pt-0 last:pb-0">
-      <div className="space-y-2">
-        <div className="flex flex-wrap items-center gap-2">
-          <span className="text-[13px] font-medium">{task.title}</span>
+    <li className="border-t border-border/80 first:border-t-0">
+      <div
+        className={cn(
+          clientRowGrid,
+          'transition-colors duration-150 hover:bg-row-hover',
+          active && 'bg-muted/25'
+        )}
+      >
+        <button
+          type="button"
+          onClick={onView}
+          className="min-w-0 truncate text-left text-[13px] font-medium hover:text-primary"
+        >
+          {task.title}
+        </button>
+
+        <div className="hidden md:flex md:items-center">
           <StatusBadge status={task.status} />
+        </div>
+
+        <div className="hidden lg:flex lg:items-center">
           <PriorityBadge priority={task.priority ?? 'Medium'} />
         </div>
-        {task.description && (
-          <p className="max-w-prose text-[13px] leading-relaxed text-muted-foreground">
-            {task.description}
-          </p>
-        )}
-        {dateRange && <p className="text-[13px] text-muted-foreground">{dateRange}</p>}
-        <Button
-          type="button"
-          variant="ghost"
-          size="sm"
-          className="h-8 px-2 text-muted-foreground"
-          onClick={onToggleComments}
-        >
-          <MessageSquare className="size-3.5" />
-          {expanded ? 'Hide comments' : 'Comments'}
-        </Button>
-        {expanded && <TaskComments taskId={task.id} />}
+
+        <div className="hidden text-[12px] tabular-nums text-muted-foreground lg:block">
+          {dueLabel ?? '—'}
+        </div>
+
+        <div className="flex items-center justify-end gap-0.5">
+          <div className="flex md:hidden">
+            <StatusBadge status={task.status} />
+          </div>
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon-sm"
+            onClick={onComments}
+            aria-label={`Comments on ${task.title}`}
+          >
+            <MessageSquare className="size-3.5" />
+          </Button>
+        </div>
       </div>
     </li>
   );
 }
-

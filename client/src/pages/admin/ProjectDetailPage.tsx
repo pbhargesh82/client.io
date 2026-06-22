@@ -1,29 +1,42 @@
-import { useState } from 'react';
-import { useParams } from 'react-router-dom';
+import { useMemo, useState } from 'react';
+import { Link, useParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { ChevronDown, ChevronUp, Trash2, Download, ListTodo, Paperclip } from 'lucide-react';
+import {
+  ArrowLeft,
+  ChevronDown,
+  ChevronUp,
+  ListTodo,
+  Paperclip,
+  Plus,
+  Users,
+  Calendar,
+} from 'lucide-react';
 import { api, apiUpload } from '@/lib/api';
-import type { ProjectDetail, Task, ProjectFile, ProjectStatus } from '@clientspace/shared';
-import { PageHeader } from '@/components/app/page-header';
+import type { ProjectDetail, Task, ProjectFile } from '@clientspace/shared';
 import { StatusBadge } from '@/components/app/status-badge';
 import { EmptyState } from '@/components/app/empty-state';
 import { PageSkeleton } from '@/components/app/loading';
-import { Panel } from '@/components/app/panel';
 import { FormAlert } from '@/components/app/query-error';
-import { FileUploadZone } from '@/components/app/file-upload-zone';
-import { TaskCreateForm } from '@/components/app/task-create-form';
-import { TaskRowAdmin } from '@/components/app/task-row';
+import { ProjectFilesPanel } from '@/components/app/project-files-panel';
+import {
+  ProjectJumpNav,
+  ProjectSectionTitle,
+  ProjectWorkspace,
+} from '@/components/app/project-workspace';
+import { ProjectEditSheet } from '@/components/app/admin-entity-sheets';
+import { TaskCreateSheet, TaskCommentsSheet, TaskEditSheet } from '@/components/app/task-sheets';
+import { TaskList, TaskRowAdmin } from '@/components/app/task-row';
 import { Button } from '@/components/ui/button';
-import { ButtonAnchor } from '@/components/ui/button-link';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
-const PROJECT_STATUSES: ProjectStatus[] = ['Planning', 'In Progress', 'Review', 'Done'];
+type SheetMode = 'edit' | 'comments' | null;
 
 export default function ProjectDetailPage() {
   const { id } = useParams<{ id: string }>();
   const queryClient = useQueryClient();
-  const [expandedTask, setExpandedTask] = useState<string | null>(null);
+  const [createOpen, setCreateOpen] = useState(false);
+  const [editProjectOpen, setEditProjectOpen] = useState(false);
+  const [sheetTaskId, setSheetTaskId] = useState<string | null>(null);
+  const [sheetMode, setSheetMode] = useState<SheetMode>(null);
   const [error, setError] = useState('');
 
   const { data: project, isLoading } = useQuery({
@@ -32,21 +45,37 @@ export default function ProjectDetailPage() {
     enabled: !!id,
   });
 
-  const updateProject = useMutation({
-    mutationFn: (updates: Partial<ProjectDetail>) =>
-      api(`/projects/${id}`, { method: 'PATCH', body: JSON.stringify(updates) }),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['projects', id] }),
-  });
+  const sheetTask = useMemo(
+    () => project?.tasks?.find((t) => t.id === sheetTaskId) ?? null,
+    [project?.tasks, sheetTaskId]
+  );
+
+  const openSheet = (taskId: string, mode: Exclude<SheetMode, null>) => {
+    setSheetTaskId(taskId);
+    setSheetMode(mode);
+  };
+
+  const closeSheet = () => {
+    setSheetTaskId(null);
+    setSheetMode(null);
+  };
 
   const archiveProject = useMutation({
     mutationFn: () => api(`/projects/${id}/archive`, { method: 'PATCH' }),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['projects'] }),
+    onSuccess: () => {
+      setEditProjectOpen(false);
+      queryClient.invalidateQueries({ queryKey: ['projects'] });
+      queryClient.invalidateQueries({ queryKey: ['projects', id] });
+    },
   });
 
   const addTask = useMutation({
     mutationFn: (body: Record<string, unknown>) =>
       api<Task>(`/projects/${id}/tasks`, { method: 'POST', body: JSON.stringify(body) }),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['projects', id] }),
+    onSuccess: () => {
+      setCreateOpen(false);
+      queryClient.invalidateQueries({ queryKey: ['projects', id] });
+    },
     onError: (err) => setError(err instanceof Error ? err.message : 'Failed to add task'),
   });
 
@@ -58,7 +87,10 @@ export default function ProjectDetailPage() {
 
   const uploadFile = useMutation({
     mutationFn: (file: File) => apiUpload<ProjectFile>(`/projects/${id}/files`, file),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['projects', id] }),
+    onSuccess: () => {
+      setError('');
+      queryClient.invalidateQueries({ queryKey: ['projects', id] });
+    },
     onError: (err) => setError(err instanceof Error ? err.message : 'Upload failed'),
   });
 
@@ -85,165 +117,219 @@ export default function ProjectDetailPage() {
   if (isLoading) return <PageSkeleton rows={8} />;
   if (!project) return <EmptyState message="Project not found" />;
 
+  const taskCount = project.tasks?.length ?? 0;
+  const fileCount = project.files?.length ?? 0;
+
   return (
-    <div>
-      <PageHeader title={project.title} description={project.client?.name}>
-        <div className="flex flex-wrap items-center gap-2">
-          <Select
-            value={project.status}
-            onValueChange={(v) => v && updateProject.mutate({ status: v as ProjectStatus })}
-          >
-            <SelectTrigger className="w-[160px]">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {PROJECT_STATUSES.map((s) => (
-                <SelectItem key={s} value={s}>
-                  {s}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          {!project.archived && (
-            <Button variant="outline" onClick={() => archiveProject.mutate()}>
-              Archive
+    <div className="page-stack">
+      <Link
+        to="/projects"
+        className="inline-flex w-fit items-center gap-1.5 rounded-md text-[13px] font-medium text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+      >
+        <ArrowLeft className="size-4" aria-hidden />
+        All projects
+      </Link>
+
+      <section className="rounded-lg border border-border/80 bg-card p-5 sm:p-6">
+        <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
+          <div className="min-w-0 space-y-3">
+            <div className="flex flex-wrap items-center gap-2">
+              <h1>{project.title}</h1>
+              <StatusBadge status={project.status} />
+              {project.archived && (
+                <span className="rounded-md bg-muted px-2 py-0.5 text-[11px] font-medium text-muted-foreground">
+                  Archived
+                </span>
+              )}
+            </div>
+
+            {project.client && (
+              <Link
+                to={`/clients/${project.client_id}`}
+                className="inline-flex items-center gap-1.5 rounded-sm text-[13px] font-medium text-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+              >
+                <Users className="size-3.5 shrink-0" aria-hidden />
+                {project.client.name}
+                {project.client.company && (
+                  <span className="font-normal text-muted-foreground">· {project.client.company}</span>
+                )}
+              </Link>
+            )}
+
+            {project.description && (
+              <p className="max-w-prose text-[13px] leading-relaxed text-muted-foreground">
+                {project.description}
+              </p>
+            )}
+
+            <dl className="flex flex-wrap gap-x-6 gap-y-2 text-[13px]">
+              {project.target_date && (
+                <div className="flex items-center gap-1.5">
+                  <Calendar className="size-3.5 text-muted-foreground" aria-hidden />
+                  <dt className="text-muted-foreground">Target</dt>
+                  <dd className="font-medium">
+                    {new Date(project.target_date).toLocaleDateString()}
+                  </dd>
+                </div>
+              )}
+              <div className="flex items-center gap-1.5">
+                <ListTodo className="size-3.5 text-muted-foreground" aria-hidden />
+                <dt className="text-muted-foreground">Tasks</dt>
+                <dd className="font-medium tabular-nums">{taskCount}</dd>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <Paperclip className="size-3.5 text-muted-foreground" aria-hidden />
+                <dt className="text-muted-foreground">Files</dt>
+                <dd className="font-medium tabular-nums">{fileCount}</dd>
+              </div>
+            </dl>
+          </div>
+
+          <div className="flex shrink-0 flex-wrap items-center gap-2 lg:pt-1">
+            <Button variant="outline" onClick={() => setEditProjectOpen(true)}>
+              Edit project
             </Button>
-          )}
+          </div>
         </div>
-      </PageHeader>
+      </section>
 
       {error && <FormAlert message={error} />}
 
-      <div className="mb-6 flex flex-wrap items-center gap-3">
-        <StatusBadge status={project.status} />
-        {project.target_date && (
-          <span className="text-[13px] text-muted-foreground">
-            Target {new Date(project.target_date).toLocaleDateString()}
-          </span>
-        )}
-      </div>
+      <ProjectJumpNav taskCount={taskCount} fileCount={fileCount} />
 
-      {project.description && (
-        <p className="mb-6 max-w-prose text-[13px] leading-relaxed text-muted-foreground">
-          {project.description}
-        </p>
-      )}
-
-      <Tabs defaultValue="tasks" className="space-y-6">
-        <TabsList>
-          <TabsTrigger value="tasks">
-            <ListTodo className="size-4" /> Tasks
-          </TabsTrigger>
-          <TabsTrigger value="files">
-            <Paperclip className="size-4" /> Files
-          </TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="tasks">
-          <Panel title="Task list">
-            <TaskCreateForm
-              pending={addTask.isPending}
-              onSubmit={(task) => addTask.mutate(task)}
+      <ProjectWorkspace
+        tasks={
+          <section aria-labelledby="project-tasks-heading">
+            <ProjectSectionTitle
+              id="project-tasks-heading"
+              icon={ListTodo}
+              title="Tasks"
+              count={taskCount}
+              action={
+                <Button size="sm" onClick={() => setCreateOpen(true)}>
+                  <Plus className="size-4" aria-hidden />
+                  Add task
+                </Button>
+              }
             />
 
             {!project.tasks?.length ? (
-              <EmptyState icon={ListTodo} message="No tasks yet. Add one above." className="py-8" />
+              <EmptyState
+                icon={ListTodo}
+                title="No tasks yet"
+                message="Add a task to break work into trackable steps."
+                action={
+                  <Button size="sm" onClick={() => setCreateOpen(true)}>
+                    <Plus className="size-4" aria-hidden />
+                    Add task
+                  </Button>
+                }
+                className="py-10"
+              />
             ) : (
-              <ul className="divide-y divide-border">
+              <TaskList variant="admin">
                 {project.tasks.map((task, idx) => (
                   <TaskRowAdmin
                     key={task.id}
                     task={task}
-                    expanded={expandedTask === task.id}
-                    onToggleComments={() =>
-                      setExpandedTask(expandedTask === task.id ? null : task.id)
-                    }
-                    onUpdate={(updates) => updateTask.mutate({ taskId: task.id, updates })}
+                    isFirst={idx === 0}
+                    active={sheetTaskId === task.id}
+                    onEdit={() => openSheet(task.id, 'edit')}
+                    onComments={() => openSheet(task.id, 'comments')}
                     reorder={
-                      <div className="flex flex-col gap-0.5">
+                      <div className="flex shrink-0 flex-col gap-0">
                         <Button
                           type="button"
                           variant="ghost"
                           size="icon-sm"
+                          className="size-7"
                           onClick={() => moveTask(task, 'up')}
                           disabled={idx === 0}
                           aria-label="Move task up"
                         >
-                          <ChevronUp className="size-4" />
+                          <ChevronUp className="size-3.5" />
                         </Button>
                         <Button
                           type="button"
                           variant="ghost"
                           size="icon-sm"
+                          className="size-7"
                           onClick={() => moveTask(task, 'down')}
                           disabled={idx === (project.tasks?.length ?? 0) - 1}
                           aria-label="Move task down"
                         >
-                          <ChevronDown className="size-4" />
+                          <ChevronDown className="size-3.5" />
                         </Button>
                       </div>
                     }
                   />
                 ))}
-              </ul>
+              </TaskList>
             )}
-          </Panel>
-        </TabsContent>
-
-        <TabsContent value="files">
-          <Panel title="Shared files">
-            <FileUploadZone
-              className="mb-4"
-              uploading={uploadFile.isPending}
-              onFile={(f) => uploadFile.mutate(f)}
+          </section>
+        }
+        files={
+          <section aria-labelledby="project-files-heading">
+            <ProjectSectionTitle
+              id="project-files-heading"
+              icon={Paperclip}
+              title="Files"
+              count={fileCount}
+              className="hidden lg:flex"
             />
+            <h2 className="mb-4 flex items-center gap-2 text-sm font-semibold tracking-tight lg:hidden">
+              <Paperclip className="size-4 text-muted-foreground" aria-hidden />
+              Files
+              <span className="font-normal text-muted-foreground">({fileCount})</span>
+            </h2>
+            <ProjectFilesPanel
+              files={project.files ?? []}
+              canUpload
+              canDelete
+              uploading={uploadFile.isPending}
+              uploadError={
+                uploadFile.isError
+                  ? uploadFile.error instanceof Error
+                    ? uploadFile.error.message
+                    : 'Upload failed'
+                  : null
+              }
+              onUpload={(f) => uploadFile.mutateAsync(f)}
+              onDelete={(fileId) => deleteFile.mutate(fileId)}
+            />
+          </section>
+        }
+      />
 
-            {!project.files?.length ? (
-              <EmptyState icon={Paperclip} message="No files uploaded yet." className="py-8" />
-            ) : (
-              <ul className="divide-y divide-border">
-                {project.files.map((f) => (
-                  <li
-                    key={f.id}
-                    className="flex items-center justify-between gap-3 py-3 first:pt-0 last:pb-0"
-                  >
-                    <div className="min-w-0">
-                      <p className="truncate text-[13px] font-medium">{f.name}</p>
-                      <p className="text-[13px] text-muted-foreground">
-                        {(f.size_bytes / 1024).toFixed(1)} KB ·{' '}
-                        {new Date(f.created_at).toLocaleDateString()}
-                      </p>
-                    </div>
-                    <div className="flex shrink-0 gap-1">
-                      {f.download_url && (
-                        <ButtonAnchor
-                          variant="ghost"
-                          size="icon-sm"
-                          href={f.download_url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          aria-label={`Download ${f.name}`}
-                        >
-                          <Download className="size-4" />
-                        </ButtonAnchor>
-                      )}
-                      <Button
-                        variant="ghost"
-                        size="icon-sm"
-                        className="text-destructive"
-                        onClick={() => deleteFile.mutate(f.id)}
-                        aria-label={`Delete ${f.name}`}
-                      >
-                        <Trash2 className="size-4" />
-                      </Button>
-                    </div>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </Panel>
-        </TabsContent>
-      </Tabs>
+      <TaskCreateSheet
+        open={createOpen}
+        onOpenChange={setCreateOpen}
+        pending={addTask.isPending}
+        onSubmit={(task) => addTask.mutate(task)}
+      />
+
+      <ProjectEditSheet
+        project={project}
+        open={editProjectOpen}
+        onOpenChange={setEditProjectOpen}
+        onArchive={!project.archived ? () => archiveProject.mutate() : undefined}
+        archiving={archiveProject.isPending}
+      />
+
+      <TaskEditSheet
+        task={sheetTask}
+        open={sheetMode === 'edit'}
+        onOpenChange={(open) => !open && closeSheet()}
+        onUpdate={(updates) => {
+          if (sheetTask) updateTask.mutate({ taskId: sheetTask.id, updates });
+        }}
+      />
+
+      <TaskCommentsSheet
+        task={sheetTask}
+        open={sheetMode === 'comments'}
+        onOpenChange={(open) => !open && closeSheet()}
+      />
     </div>
   );
 }

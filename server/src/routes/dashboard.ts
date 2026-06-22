@@ -66,7 +66,8 @@ router.get('/activity', authenticate, requireAdmin, async (_req, res) => {
 
   const { data: fileUploads } = await supabaseAdmin
     .from('files')
-    .select('id, name, created_at, project_id, projects(title)')
+    .select('id, name, created_at, project_id, comment_id, projects(title)')
+    .is('comment_id', null)
     .order('created_at', { ascending: false })
     .limit(10);
 

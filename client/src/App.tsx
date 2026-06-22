@@ -7,10 +7,8 @@ import ClientLayout from './layouts/ClientLayout';
 import AdminLoginPage from './pages/admin/LoginPage';
 import AdminDashboardPage from './pages/admin/DashboardPage';
 import ClientsListPage from './pages/admin/ClientsListPage';
-import ClientNewPage from './pages/admin/ClientNewPage';
 import ClientDetailPage from './pages/admin/ClientDetailPage';
 import ProjectsListPage from './pages/admin/ProjectsListPage';
-import ProjectNewPage from './pages/admin/ProjectNewPage';
 import ProjectDetailPage from './pages/admin/ProjectDetailPage';
 import ClientLoginPage from './pages/client/LoginPage';
 import ClientDashboardPage from './pages/client/DashboardPage';
@@ -43,10 +41,10 @@ export default function App() {
               <Route element={<AdminLayout />}>
                 <Route path="/dashboard" element={<AdminDashboardPage />} />
                 <Route path="/clients" element={<ClientsListPage />} />
-                <Route path="/clients/new" element={<ClientNewPage />} />
+                <Route path="/clients/new" element={<Navigate to="/clients?create=1" replace />} />
                 <Route path="/clients/:id" element={<ClientDetailPage />} />
                 <Route path="/projects" element={<ProjectsListPage />} />
-                <Route path="/projects/new" element={<ProjectNewPage />} />
+                <Route path="/projects/new" element={<Navigate to="/projects?create=1" replace />} />
                 <Route path="/projects/:id" element={<ProjectDetailPage />} />
               </Route>
             </Route>

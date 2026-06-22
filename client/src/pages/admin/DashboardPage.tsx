@@ -61,13 +61,12 @@ export default function AdminDashboardPage() {
     (stats?.active_projects ?? 0) === 0;
 
   return (
-    <div className="space-y-8">
-      <header className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-        <div className="min-w-0">
-          <h1 className="text-xl font-semibold tracking-tight md:text-2xl">
-            {firstName ? `${greeting}, ${firstName}` : greeting}
-          </h1>
-          <p className="mt-1 max-w-xl text-[13px] leading-relaxed text-muted-foreground md:text-sm">
+    <div className="page-stack">
+      <header className="flex flex-col gap-4 border-b border-border/80 pb-8 sm:flex-row sm:items-start sm:justify-between">
+        <div className="min-w-0 space-y-1">
+          <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Overview</p>
+          <h1>{firstName ? `${greeting}, ${firstName}` : greeting}</h1>
+          <p className="max-w-xl text-[13px] leading-relaxed text-muted-foreground md:text-sm">
             {overdue > 0
               ? `${overdue} overdue task${overdue === 1 ? '' : 's'} need attention.`
               : isEmptyWorkspace
@@ -76,10 +75,10 @@ export default function AdminDashboardPage() {
           </p>
         </div>
         <div className="flex shrink-0 flex-wrap items-center gap-2">
-          <ButtonLink variant="outline" to="/clients/new">
+          <ButtonLink variant="outline" to="/clients?create=1">
             Add client
           </ButtonLink>
-          <ButtonLink to="/projects/new">
+          <ButtonLink to="/projects?create=1">
             <Plus className="size-4" aria-hidden />
             New project
           </ButtonLink>
@@ -114,13 +113,13 @@ export default function AdminDashboardPage() {
           <p className="font-medium">Get started in two steps</p>
           <ol className="mt-2 list-inside list-decimal space-y-1 text-muted-foreground">
             <li>
-              <ButtonLink variant="link" className="h-auto p-0 text-[13px]" to="/clients/new">
+              <ButtonLink variant="link" className="h-auto p-0 text-[13px]" to="/clients?create=1">
                 Add a client
               </ButtonLink>{' '}
               and share portal access
             </li>
             <li>
-              <ButtonLink variant="link" className="h-auto p-0 text-[13px]" to="/projects/new">
+              <ButtonLink variant="link" className="h-auto p-0 text-[13px]" to="/projects?create=1">
                 Create a project
               </ButtonLink>{' '}
               with tasks and files
@@ -154,7 +153,7 @@ export default function AdminDashboardPage() {
                   <li key={item.id}>
                     <Link
                       to={`/projects/${item.project_id}`}
-                      className="group flex gap-3 rounded-md py-3 transition-colors duration-150 hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 first:pt-0 last:pb-0"
+                      className="group flex gap-3 px-1 py-3 interactive-row first:pt-0 last:pb-0"
                     >
                       <span className="mt-0.5 flex size-7 shrink-0 items-center justify-center rounded-md bg-muted text-muted-foreground group-hover:bg-background">
                         <Icon className="size-3.5" aria-hidden />
@@ -214,7 +213,7 @@ export default function AdminDashboardPage() {
               message="Create a project and assign it to a client."
               className="py-10"
               action={
-                <ButtonLink size="sm" to="/projects/new">
+                <ButtonLink size="sm" to="/projects?create=1">
                   Create project
                 </ButtonLink>
               }
@@ -225,7 +224,7 @@ export default function AdminDashboardPage() {
                 <li key={p.id}>
                   <Link
                     to={`/projects/${p.id}`}
-                    className="group flex items-center justify-between gap-3 rounded-md px-3 py-2.5 transition-colors duration-150 hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                    className="group flex items-center justify-between gap-3 px-3 py-3 interactive-row"
                   >
                     <span className="min-w-0">
                       <span className="block truncate text-[13px] font-medium">{p.title}</span>

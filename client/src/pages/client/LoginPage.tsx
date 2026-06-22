@@ -48,36 +48,46 @@ export default function ClientLoginPage() {
   };
 
   return (
-    <div className="grid min-h-screen lg:grid-cols-[1fr_420px]">
-      <div className="hidden flex-col justify-between bg-primary p-10 text-primary-foreground lg:flex">
-        <div className="flex items-center gap-2">
-          <span className="flex size-8 items-center justify-center rounded-md bg-primary-foreground/15 text-xs font-semibold">
+    <div className="grid min-h-screen lg:grid-cols-[1fr_440px]">
+      <div
+        className="relative hidden flex-col justify-between overflow-hidden bg-primary p-12 text-primary-foreground lg:flex"
+        style={{
+          backgroundImage:
+            'radial-gradient(circle at 1px 1px, oklch(1 0 0 / 0.08) 1px, transparent 0)',
+          backgroundSize: '24px 24px',
+        }}
+      >
+        <div className="flex items-center gap-3">
+          <span className="flex size-9 items-center justify-center rounded-md bg-primary-foreground/15 text-xs font-semibold tracking-tight">
             CS
           </span>
-          <span className="font-semibold">ClientSpace</span>
+          <span className="text-sm font-semibold tracking-tight">ClientSpace</span>
         </div>
-        <div className="max-w-md">
-          <h2 className="text-2xl font-semibold leading-snug tracking-tight text-balance">
+        <div className="max-w-md space-y-4">
+          <p className="text-[11px] font-medium uppercase tracking-wider text-primary-foreground/50">
+            Client portal
+          </p>
+          <h2 className="text-3xl font-semibold leading-tight tracking-tight text-balance">
             See your projects, tasks, and files in one place.
           </h2>
-          <p className="mt-3 text-sm leading-relaxed text-primary-foreground/75">
+          <p className="text-sm leading-relaxed text-primary-foreground/75">
             A simple portal to follow progress and leave feedback — no clutter, no guesswork.
           </p>
         </div>
-        <p className="text-xs text-primary-foreground/45">Client portal</p>
+        <p className="text-xs text-primary-foreground/40">Read-only progress, light interaction</p>
       </div>
 
-      <div className="flex items-center justify-center p-6 sm:p-10">
-        <div className="w-full max-w-sm">
+      <div className="auth-panel">
+        <div className="auth-form-card">
           <div className="mb-8 lg:hidden">
-            <span className="flex size-8 items-center justify-center rounded-md bg-primary text-xs font-semibold text-primary-foreground">
+            <span className="flex size-9 items-center justify-center rounded-md bg-primary text-xs font-semibold text-primary-foreground">
               CS
             </span>
-            <h1 className="mt-4 text-xl font-semibold">Client portal</h1>
+            <h1 className="mt-5">Client portal</h1>
             <p className="mt-1 text-sm text-muted-foreground">View your projects and progress</p>
           </div>
           <div className="mb-8 hidden lg:block">
-            <h1 className="text-xl font-semibold">Sign in</h1>
+            <h1>Sign in</h1>
             <p className="mt-1 text-sm text-muted-foreground">Enter your portal credentials</p>
           </div>
 
