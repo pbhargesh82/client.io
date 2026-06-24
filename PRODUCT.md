@@ -1,9 +1,5 @@
 # Product
 
-## Register
-
-product
-
 ## Users
 
 **Admin:** Freelancers and small agencies managing multiple client relationships. They work at a desk, often switching between clients, and need fast orientation — who needs attention, what's overdue, what's blocked.
@@ -13,6 +9,32 @@ product
 ## Product Purpose
 
 ClientSpace is a dual-role project portal: admins manage clients, projects, tasks, and files; clients get a read-focused view of their work with light interaction (comments, downloads). Success means both roles complete their job in under a minute without confusion or training.
+
+## Authentication
+
+- Single sign-in page at `/login` for both admin and client roles.
+- Email + password via Supabase Auth (no magic links).
+- After login, users are routed by role: admin → `/dashboard`, client → `/client/dashboard`.
+
+## Client onboarding
+
+- Admins create client accounts from the Clients list.
+- Password can be set manually or auto-generated.
+- **No welcome email** — the admin copies credentials from the in-app sheet and shares them with the client directly.
+
+## Admin capabilities
+
+- Dashboard with summary metrics
+- Clients list (including inactive clients); manage client in a side panel (`?client=<id>`)
+- Projects list and project workspace (tasks, files, discussion)
+- Create/edit/archive projects and tasks; reorder tasks
+- Upload and manage project files
+
+## Client capabilities
+
+- Dashboard with assigned project overview
+- Project view: tasks, files (download), comments
+- Read-focused layout with lighter information density than admin
 
 ## Brand Personality
 

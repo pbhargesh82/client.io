@@ -16,7 +16,7 @@ colors:
   outline: '#76777d'
   outline-variant: '#c6c6cd'
   surface-tint: '#565e74'
-  primary: '#000000'
+  primary: '#0f172a'
   on-primary: '#ffffff'
   primary-container: '#131b2e'
   on-primary-container: '#7c839b'
@@ -25,7 +25,7 @@ colors:
   on-secondary: '#ffffff'
   secondary-container: '#d5e3fd'
   on-secondary-container: '#57657b'
-  tertiary: '#000000'
+  tertiary: '#2563eb'
   on-tertiary: '#ffffff'
   tertiary-container: '#00174b'
   on-tertiary-container: '#497cff'
@@ -45,7 +45,7 @@ colors:
   tertiary-fixed-dim: '#b4c5ff'
   on-tertiary-fixed: '#00174b'
   on-tertiary-fixed-variant: '#003ea8'
-  background: '#f7f9fb'
+  background: '#f8fafc'
   on-background: '#191c1e'
   surface-variant: '#e0e3e5'
 typography:
@@ -172,3 +172,14 @@ The shape language is conservative and geometric.
 - **Status Chips:** Small, subtle background tints with high-contrast text (e.g., Success: Light green background, Dark green text).
 - **Navigation:** A clean left-hand sidebar or top-bar with `label-caps` for section headers. Active states are indicated by a weight change and a subtle background tint of `#F1F5F9`.
 - **Focus Rings:** Non-negotiable for accessibility; ensure `outline-offset: 2px` on all clickable components.
+
+## Implementation
+
+Source of truth for tokens in the app: `client/src/index.css` (`:root` and `@theme inline`).
+
+- **Mode:** Light mode only
+- **Icons:** Material Symbols Outlined (`client/src/components/ui/icon.tsx`) — not Lucide
+- **UI primitives:** shadcn/ui on Base UI (`client/src/components/ui/`)
+- **App components:** `client/src/components/app/` — panels, summary cards, task rows, sheets, badges
+- **Fonts:** Hanken Grotesk (headlines), Inter (body), JetBrains Mono (data) — loaded in `client/index.html`
+- **Layout:** Admin and client shells with sidebar navigation; max content width `1280px`
