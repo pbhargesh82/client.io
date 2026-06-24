@@ -31,7 +31,7 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="grid min-h-screen lg:grid-cols-[1fr_440px]">
+    <div className="grid min-h-screen min-w-0 overflow-x-clip lg:grid-cols-[1fr_440px]">
       <div className="relative hidden flex-col justify-between overflow-hidden bg-surface-container-low p-12 lg:flex">
         <div className="relative flex items-center gap-3">
           <div
@@ -58,7 +58,7 @@ export default function LoginPage() {
         <p className="font-body-sm text-body-sm text-on-surface-variant">Secure email and password access</p>
       </div>
 
-      <div className="auth-panel">
+      <div className="auth-panel min-w-0">
         <div className="auth-form-card">
           <div className="mb-stack-lg flex items-center gap-3 lg:hidden">
             <div

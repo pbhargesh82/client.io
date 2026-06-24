@@ -10,8 +10,9 @@ export type SummaryItem = {
 
 function summaryGridClass(count: number) {
   if (count <= 1) return '';
-  if (count === 2) return 'sm:grid-cols-2';
-  return 'sm:grid-cols-3';
+  if (count === 2) return 'grid-cols-2';
+  if (count === 3) return 'grid-cols-2 lg:grid-cols-3';
+  return 'grid-cols-2 lg:grid-cols-4';
 }
 
 export function SummaryBar({
@@ -28,7 +29,7 @@ export function SummaryBar({
   if (loading) {
     return (
       <div
-        className={cn('grid grid-cols-1 gap-gutter', gridClass, className)}
+        className={cn('grid gap-gutter', gridClass, className)}
         aria-busy="true"
         aria-label="Loading summary"
       >
@@ -46,7 +47,7 @@ export function SummaryBar({
   }
 
   return (
-    <dl className={cn('grid grid-cols-1 gap-gutter', gridClass, className)}>
+    <dl className={cn('grid gap-gutter', gridClass, className)}>
       {items.map((item) => {
         const isAlert = item.emphasis === 'alert' && item.value !== 0;
 

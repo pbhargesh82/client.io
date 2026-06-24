@@ -124,7 +124,7 @@ export function ProjectJumpNav({
   return (
     <nav
       className={cn(
-        'sticky top-16 z-10 -mx-margin-page flex gap-1 border-b border-outline-variant bg-surface px-margin-page py-2 lg:hidden',
+        'sticky top-header-mobile z-10 -mx-margin-page flex gap-1 border-b border-outline-variant bg-surface px-margin-page py-2 md:top-0 lg:hidden',
         className
       )}
       aria-label="Project sections"
@@ -163,12 +163,15 @@ export function ProjectWorkspace({
         className
       )}
     >
-      <div id="project-tasks" className="min-w-0 scroll-mt-24">
+      <div
+        id="project-tasks"
+        className="min-w-0 scroll-mt-[calc(var(--spacing-header-mobile)+3.5rem)] md:scroll-mt-14 lg:scroll-mt-4"
+      >
         {tasks}
       </div>
       <aside
         id="project-files"
-        className="card-surface scroll-mt-24 p-stack-md lg:sticky lg:top-20 lg:max-h-[calc(100vh-6rem)] lg:overflow-y-auto"
+        className="card-surface scroll-mt-[calc(var(--spacing-header-mobile)+3.5rem)] p-stack-md md:scroll-mt-14 lg:sticky lg:top-20 lg:max-h-[calc(100vh-6rem)] lg:scroll-mt-4 lg:overflow-y-auto"
       >
         {files}
       </aside>

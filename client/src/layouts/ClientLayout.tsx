@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '@/hooks/useAuth';
@@ -115,6 +115,7 @@ export default function ClientLayout() {
   const navigate = useNavigate();
   const { pathname } = useLocation();
   const { name } = useAuth();
+  const [sheetOpen, setSheetOpen] = useState(false);
   const initials = name?.split(' ').map((n) => n[0]).join('').slice(0, 2).toUpperCase() || 'CL';
 
   const { data } = useQuery({
@@ -130,7 +131,7 @@ export default function ClientLayout() {
   }, [pathname, data?.projects, navigate]);
 
   return (
-    <div className="flex min-h-screen bg-background">
+    <div className="flex min-h-screen overflow-x-clip bg-background">
       {/* Sidebar — single surface, border only on right edge */}
       <aside className="fixed top-0 left-0 z-40 hidden h-screen w-64 shrink-0 border-r border-outline-variant bg-surface-container-low md:flex">
         <SidebarContent />
@@ -138,10 +139,10 @@ export default function ClientLayout() {
 
       <div className="flex min-w-0 flex-1 flex-col md:ml-64">
         {/* Mobile header */}
-        <header className="sticky top-0 z-30 flex h-[4.5rem] items-center justify-between border-b border-outline-variant bg-surface px-4 md:hidden">
+        <header className="sticky top-0 z-30 flex h-header-mobile items-center justify-between border-b border-outline-variant bg-surface px-4 md:hidden">
           <SidebarBrand portalLabel="Customer Portal" compact className="border-0 px-0 py-0" />
           <div className="flex items-center gap-2">
-            <Sheet>
+            <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
               <SheetTrigger
                 className={buttonVariants({ variant: 'ghost', size: 'icon-sm' })}
                 aria-label="Open menu"
@@ -152,7 +153,7 @@ export default function ClientLayout() {
                 side="left"
                 className="w-64 border-0 border-r border-outline-variant bg-surface-container-low p-0"
               >
-                <SidebarContent />
+                <SidebarContent onNavigate={() => setSheetOpen(false)} />
               </SheetContent>
             </Sheet>
             <Avatar className="size-8">

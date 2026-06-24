@@ -32,8 +32,8 @@
   --text-headline-lg--line-height: 40px;
   --text-headline-lg--font-weight: 600;
   --text-headline-lg--letter-spacing: -0.01em;
-  --text-display: 48px;
-  --text-display--line-height: 56px;
+  --text-display: clamp(1.75rem, 1.25rem + 2.5vw, 3rem);
+  --text-display--line-height: clamp(2.125rem, 1.625rem + 2.5vw, 3.5rem);
   --text-display--font-weight: 700;
   --text-display--letter-spacing: -0.02em;
   --text-label-caps: 12px;
@@ -46,7 +46,8 @@
 
   --spacing-stack-sm: 12px;
   --spacing-unit: 8px;
-  --spacing-margin-page: 40px;
+  --spacing-margin-page: 16px;
+  --spacing-header-mobile: 4.5rem;
   --spacing-container-max: 1280px;
   --spacing-gutter: 24px;
   --spacing-stack-lg: 48px;
@@ -108,6 +109,12 @@
 }
 
 :root {
+  /* Fallbacks for browsers that don't fully resolve @theme inline at build time */
+  --spacing-margin-page: 16px;
+  --spacing-header-mobile: 4.5rem;
+  --text-display: clamp(1.75rem, 1.25rem + 2.5vw, 3rem);
+  --text-display--line-height: clamp(2.125rem, 1.625rem + 2.5vw, 3.5rem);
+
   --background: #f8fafc;
   --foreground: #191c1e;
   --surface: #f7f9fb;
@@ -139,6 +146,18 @@
   --radius: 0.25rem;
 }
 
+@media (min-width: 640px) {
+  :root {
+    --spacing-margin-page: 24px;
+  }
+}
+
+@media (min-width: 768px) {
+  :root {
+    --spacing-margin-page: 40px;
+  }
+}
+
 @layer base {
   * {
     @apply border-border outline-ring/50;
@@ -147,9 +166,17 @@
     @apply font-body-md text-body-md antialiased;
     text-rendering: optimizeLegibility;
     -webkit-font-smoothing: antialiased;
+    overflow-x: clip;
   }
   body {
     @apply bg-background text-on-surface;
+    overflow-x: clip;
+  }
+  input,
+  select,
+  textarea {
+    -webkit-appearance: none;
+    appearance: none;
   }
 }
 
@@ -209,6 +236,11 @@
   .material-symbols-outlined[data-fill='true'] {
     font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24;
   }
+
+  .overlay-backdrop {
+    -webkit-backdrop-filter: blur(4px);
+    backdrop-filter: blur(4px);
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -216,5 +248,6 @@
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
   }
 }

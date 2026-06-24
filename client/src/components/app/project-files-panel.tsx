@@ -93,7 +93,7 @@ export function ProjectFilesPanel({
                     variant="ghost"
                     size="icon-sm"
                     aria-label={`Download ${f.name}`}
-                    className="opacity-0 transition-opacity group-hover:opacity-100"
+                    className="opacity-100 transition-opacity md:opacity-0 md:group-hover:opacity-100 md:group-focus-within:opacity-100"
                     onClick={() => downloadNamedFile(f.download_url!, f.name).catch(() => undefined)}
                   >
                     <Icon name="download" className="text-[18px]" />

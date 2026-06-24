@@ -234,8 +234,8 @@ export default function AdminDashboardPage() {
                   <TableRow>
                     <TableHead>Client / Project</TableHead>
                     <TableHead>Update</TableHead>
-                    <TableHead>Date</TableHead>
-                    <TableHead>Status</TableHead>
+                    <TableHead className="hidden sm:table-cell">Date</TableHead>
+                    <TableHead className="hidden sm:table-cell">Status</TableHead>
                     <TableHead className="text-right">Action</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -246,14 +246,23 @@ export default function AdminDashboardPage() {
                         <div className="font-semibold transition-colors group-hover:text-primary">
                           {item.project_title}
                         </div>
+                        <div className="mt-1 flex flex-wrap items-center gap-2 sm:hidden">
+                          <StatusBadge status={activityTypeLabel[item.type]} />
+                          <time
+                            dateTime={item.created_at}
+                            className="font-data-mono text-data-mono text-on-surface-variant"
+                          >
+                            {formatRelativeTime(item.created_at)}
+                          </time>
+                        </div>
                       </TableCell>
                       <TableCell className="whitespace-normal">{item.description}</TableCell>
-                      <TableCell className="font-data-mono text-data-mono text-on-surface-variant">
+                      <TableCell className="hidden font-data-mono text-data-mono text-on-surface-variant sm:table-cell">
                         <time dateTime={item.created_at}>
                           {formatRelativeTime(item.created_at)}
                         </time>
                       </TableCell>
-                      <TableCell>
+                      <TableCell className="hidden sm:table-cell">
                         <StatusBadge status={activityTypeLabel[item.type]} />
                       </TableCell>
                       <TableCell className="text-right">

@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { Link, Outlet, useLocation } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { Button, buttonVariants } from '@/components/ui/button';
@@ -125,19 +126,20 @@ function AppFooter() {
 
 export default function AdminLayout() {
   const { name } = useAuth();
+  const [sheetOpen, setSheetOpen] = useState(false);
   const initials = name?.split(' ').map((n) => n[0]).join('').slice(0, 2).toUpperCase() || 'CS';
 
   return (
-    <div className="flex min-h-screen bg-background">
+    <div className="flex min-h-screen overflow-x-clip bg-background">
       <aside className="fixed top-0 left-0 z-40 hidden h-screen w-64 shrink-0 border-r border-outline-variant bg-surface-container-low md:flex">
         <SidebarContent />
       </aside>
 
       <div className="flex min-w-0 flex-1 flex-col md:ml-64">
-        <header className="sticky top-0 z-30 flex h-[4.5rem] items-center justify-between border-b border-outline-variant bg-surface px-4 md:hidden">
+        <header className="sticky top-0 z-30 flex h-header-mobile items-center justify-between border-b border-outline-variant bg-surface px-4 md:hidden">
           <SidebarBrand portalLabel="Admin Portal" compact className="border-0 px-0 py-0" />
           <div className="flex items-center gap-2">
-            <Sheet>
+            <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
               <SheetTrigger
                 className={buttonVariants({ variant: 'ghost', size: 'icon-sm' })}
                 aria-label="Open menu"
@@ -148,7 +150,7 @@ export default function AdminLayout() {
                 side="left"
                 className="w-64 border-0 border-r border-outline-variant bg-surface-container-low p-0"
               >
-                <SidebarContent />
+                <SidebarContent onNavigate={() => setSheetOpen(false)} />
               </SheetContent>
             </Sheet>
             <Avatar className="size-8">

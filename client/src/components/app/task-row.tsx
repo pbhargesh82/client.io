@@ -19,6 +19,97 @@ function formatDueDate(due: string | null): string | null {
   return new Date(due).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
 }
 
+function TaskReorderButtons({
+  task,
+  idx,
+  total,
+  onMoveTask,
+}: {
+  task: Task;
+  idx: number;
+  total: number;
+  onMoveTask: (taskId: string, direction: 'up' | 'down') => void;
+}) {
+  return (
+    <div className="flex shrink-0 flex-col">
+      <Button
+        type="button"
+        variant="ghost"
+        size="icon-sm"
+        className="size-7"
+        onClick={(e: MouseEvent) => {
+          e.stopPropagation();
+          onMoveTask(task.id, 'up');
+        }}
+        disabled={idx === 0}
+        aria-label={`Move ${task.title} up`}
+      >
+        <Icon name="expand_less" className="text-[16px]" />
+      </Button>
+      <Button
+        type="button"
+        variant="ghost"
+        size="icon-sm"
+        className="size-7"
+        onClick={(e: MouseEvent) => {
+          e.stopPropagation();
+          onMoveTask(task.id, 'down');
+        }}
+        disabled={idx === total - 1}
+        aria-label={`Move ${task.title} down`}
+      >
+        <Icon name="expand_more" className="text-[16px]" />
+      </Button>
+    </div>
+  );
+}
+
+function TaskCard({
+  task,
+  active,
+  onTaskClick,
+  showReorder,
+  idx,
+  total,
+  onMoveTask,
+}: {
+  task: Task;
+  active: boolean;
+  onTaskClick: (taskId: string) => void;
+  showReorder?: boolean;
+  idx?: number;
+  total?: number;
+  onMoveTask?: (taskId: string, direction: 'up' | 'down') => void;
+}) {
+  const dueLabel = formatDueDate(task.due_date);
+
+  return (
+    <button
+      type="button"
+      onClick={() => onTaskClick(task.id)}
+      className={cn(
+        'flex w-full gap-2 rounded-lg border border-border p-3 text-left transition-colors',
+        'hover:bg-surface-container-low focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-action',
+        active && 'bg-surface-container-low'
+      )}
+    >
+      {showReorder && onMoveTask && idx !== undefined && total !== undefined && (
+        <TaskReorderButtons task={task} idx={idx} total={total} onMoveTask={onMoveTask} />
+      )}
+      <div className="min-w-0 flex-1 space-y-2">
+        <p className="font-semibold text-on-surface">{task.title}</p>
+        <div className="flex flex-wrap items-center gap-2">
+          <StatusBadge status={task.status} />
+          <PriorityBadge priority={task.priority ?? 'Medium'} />
+          {dueLabel && (
+            <span className="font-data-mono text-data-mono text-on-surface-variant">{dueLabel}</span>
+          )}
+        </div>
+      </div>
+    </button>
+  );
+}
+
 export function AdminTaskTable({
   tasks,
   onTaskClick,
@@ -42,7 +133,22 @@ export function AdminTaskTable({
         className
       )}
     >
-      <Table className="w-full table-fixed">
+      <div className="flex flex-col gap-2 p-2 md:hidden">
+        {tasks.map((task, idx) => (
+          <TaskCard
+            key={task.id}
+            task={task}
+            active={activeTaskId === task.id}
+            onTaskClick={onTaskClick}
+            showReorder={showReorder}
+            idx={idx}
+            total={tasks.length}
+            onMoveTask={onMoveTask}
+          />
+        ))}
+      </div>
+
+      <Table className="hidden w-full table-fixed md:table">
         <colgroup>
           {showReorder && <col className="w-[2.75rem]" />}
           <col className="w-auto" />
@@ -70,38 +176,14 @@ export function AdminTaskTable({
                 className={cn('cursor-pointer', active && 'bg-surface-container-low')}
                 onClick={() => onTaskClick(task.id)}
               >
-                {showReorder && (
+                {showReorder && onMoveTask && (
                   <TableCell className="align-middle p-0 pl-1">
-                    <div className="flex flex-col">
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon-sm"
-                        className="size-7"
-                        onClick={(e: MouseEvent) => {
-                          e.stopPropagation();
-                          onMoveTask?.(task.id, 'up');
-                        }}
-                        disabled={idx === 0}
-                        aria-label={`Move ${task.title} up`}
-                      >
-                        <Icon name="expand_less" className="text-[16px]" />
-                      </Button>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon-sm"
-                        className="size-7"
-                        onClick={(e: MouseEvent) => {
-                          e.stopPropagation();
-                          onMoveTask?.(task.id, 'down');
-                        }}
-                        disabled={idx === tasks.length - 1}
-                        aria-label={`Move ${task.title} down`}
-                      >
-                        <Icon name="expand_more" className="text-[16px]" />
-                      </Button>
-                    </div>
+                    <TaskReorderButtons
+                      task={task}
+                      idx={idx}
+                      total={tasks.length}
+                      onMoveTask={onMoveTask}
+                    />
                   </TableCell>
                 )}
                 <TableCell className="align-middle whitespace-normal">
@@ -144,7 +226,18 @@ export function ClientTaskTable({
         className
       )}
     >
-      <Table className="w-full table-fixed">
+      <div className="flex flex-col gap-2 p-2 md:hidden">
+        {tasks.map((task) => (
+          <TaskCard
+            key={task.id}
+            task={task}
+            active={activeTaskId === task.id}
+            onTaskClick={onTaskClick}
+          />
+        ))}
+      </div>
+
+      <Table className="hidden w-full table-fixed md:table">
         <colgroup>
           <col className="w-auto" />
           <col className="w-[7.5rem]" />
