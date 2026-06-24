@@ -1,5 +1,5 @@
 [build]
-  command = "npm ci && npm run build -w client"
+  command = "bash scripts/netlify-build.sh"
   publish = "client/dist"
 
 [build.environment]
