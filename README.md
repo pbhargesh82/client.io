@@ -61,14 +61,21 @@ curl http://localhost:3001/health
    |----------|---------|
    | `VITE_SUPABASE_URL` | `https://xxxx.supabase.co` |
    | `VITE_SUPABASE_ANON_KEY` | Supabase anon key |
-   | `VITE_API_URL` | Your production API URL (Railway/Render) |
+   | `VITE_API_URL` | Your Render API URL (e.g. `https://clientspace-api.onrender.com`) |
 
 3. In Supabase → Authentication → URL configuration, add your Netlify URL to **Site URL** and **Redirect URLs**.
 
-### API (Railway)
+### API (Render)
 
-- `railway.json` configures the Express API. Set env vars from `server/.env.example`.
-- Set `CORS_ORIGIN` to your Netlify URL (comma-separated if multiple).
+1. In [Render](https://dashboard.render.com), create a **Blueprint** from this repo (`render.yaml`) or a **Web Service** manually:
+   - **Build command:** `npm ci && npm run build -w server`
+   - **Start command:** `npm run start -w server`
+   - **Health check path:** `/health`
+2. Set environment variables from `server/.env.example`:
+   - `CORS_ORIGIN` → your Netlify URL (`https://clientspace-app.netlify.app`)
+   - `APP_URL` → same Netlify URL
+   - Supabase keys, `RESEND_API_KEY`, `EMAIL_FROM`
+3. Copy the Render service URL into Netlify `VITE_API_URL`, then redeploy the frontend.
 
 ## Scripts
 

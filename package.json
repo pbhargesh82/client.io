@@ -12,7 +12,6 @@
     "build": "npm run build -w server && npm run build -w client",
     "deploy:netlify": "npm run build -w client && npx netlify-cli deploy --prod --no-build --dir=client/dist --filter @clientspace/client",
     "deploy:netlify:draft": "npm run build -w client && npx netlify-cli deploy --no-build --dir=client/dist --filter @clientspace/client",
-    "deploy:railway": "npx @railway/cli up",
     "seed:admin": "npm run seed:admin -w server",
     "seed:demo": "npm run seed:demo -w server",
     "lint": "npm run lint -w client && npm run lint -w server"
