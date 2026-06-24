@@ -1,5 +1,6 @@
 import '../load-env.js';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
+import ws from 'ws';
 
 const supabaseUrl = process.env.SUPABASE_URL;
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -11,14 +12,22 @@ if (!supabaseUrl || !supabaseServiceKey || !supabaseAnonKey) {
   );
 }
 
-export const supabaseAdmin: SupabaseClient = createClient(supabaseUrl, supabaseServiceKey, {
+const supabaseOptions = {
   auth: { autoRefreshToken: false, persistSession: false },
-});
+  // Node < 22 has no global WebSocket; Supabase realtime requires a transport.
+  realtime: { transport: ws as unknown as typeof WebSocket },
+};
+
+export const supabaseAdmin: SupabaseClient = createClient(
+  supabaseUrl,
+  supabaseServiceKey,
+  supabaseOptions
+);
 
 export function createUserClient(accessToken: string) {
   return createClient(supabaseUrl!, supabaseAnonKey!, {
+    ...supabaseOptions,
     global: { headers: { Authorization: `Bearer ${accessToken}` } },
-    auth: { autoRefreshToken: false, persistSession: false },
   });
 }
 
