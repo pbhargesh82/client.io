@@ -1,6 +1,5 @@
 [build]
-  # Bust Netlify cache; install Linux rolldown binding (npm workspaces + vite 8)
-  command = "rm -rf node_modules client/node_modules && npm install && npm install @rolldown/binding-linux-x64-gnu@1.0.3 -w client && npm run build -w client"
+  command = "npm ci && npm run build -w client"
   publish = "client/dist"
 
 [build.environment]
