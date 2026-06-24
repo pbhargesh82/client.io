@@ -73,8 +73,7 @@ curl http://localhost:3001/health
    - **Health check path:** `/health`
 2. Set environment variables from `server/.env.example`:
    - `CORS_ORIGIN` → your Netlify URL (`https://clientspace-app.netlify.app`)
-   - `APP_URL` → same Netlify URL
-   - Supabase keys, `RESEND_API_KEY`, `EMAIL_FROM`
+   - Supabase keys
 3. Copy the Render service URL into Netlify `VITE_API_URL`, then redeploy the frontend.
 
 ## Scripts

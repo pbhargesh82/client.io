@@ -50,7 +50,7 @@ export default function LoginPage() {
             One calm place for clients, projects, and delivery.
           </h2>
           <p className="font-body-md text-body-md text-on-surface-variant">
-            Sign in with the email and password from your invite. Admins manage work; clients follow progress and
+            Sign in with the email and password shared by your admin. Admins manage work; clients follow progress and
             share feedback.
           </p>
         </div>
@@ -76,7 +76,7 @@ export default function LoginPage() {
           <div className="mb-stack-lg hidden lg:block">
             <h1 className="font-headline-lg text-headline-lg text-on-surface">Sign in</h1>
             <p className="mt-unit font-body-sm text-body-sm text-on-surface-variant">
-              Use your invite email and password
+              Use the email and password from your admin
             </p>
           </div>
 
