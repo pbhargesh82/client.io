@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 import { Link } from 'react-router-dom';
-import { ChevronRight } from 'lucide-react';
+import { Icon } from '@/components/ui/icon';
 import { cn } from '@/lib/utils';
 
 export function ListLinkRow({
@@ -20,22 +20,26 @@ export function ListLinkRow({
     <Link
       to={to}
       className={cn(
-        'group flex items-center justify-between gap-3 rounded-md px-3 py-3',
+        'group flex items-center justify-between gap-3 rounded-lg px-stack-sm py-unit',
         'interactive-row',
         className
       )}
     >
       <span className="min-w-0">
-        <span className="block truncate text-[13px] font-medium">{title}</span>
+        <span className="block truncate font-body-sm text-body-sm font-semibold text-on-surface">
+          {title}
+        </span>
         {subtitle && (
-          <span className="mt-0.5 block truncate text-[13px] text-muted-foreground">{subtitle}</span>
+          <span className="mt-0.5 block truncate font-body-sm text-body-sm text-on-surface-variant">
+            {subtitle}
+          </span>
         )}
       </span>
       <span className="flex shrink-0 items-center gap-2">
         {trailing}
-        <ChevronRight
-          className="size-4 text-muted-foreground/35 transition-transform duration-150 group-hover:translate-x-0.5 group-hover:text-muted-foreground"
-          aria-hidden
+        <Icon
+          name="chevron_right"
+          className="text-on-surface-variant/40 transition-transform duration-150 group-hover:translate-x-0.5 group-hover:text-on-surface-variant"
         />
       </span>
     </Link>

@@ -3,10 +3,10 @@ import { cn } from '@/lib/utils';
 import type { TaskPriority } from '@clientspace/shared';
 
 const styles: Record<TaskPriority, string> = {
-  Low: 'border-transparent bg-muted text-muted-foreground',
-  Medium: 'border-transparent bg-secondary text-secondary-foreground',
-  High: 'border-transparent bg-primary/10 text-primary',
-  Urgent: 'border-transparent bg-destructive/10 text-destructive',
+  Low: 'bg-surface-container-highest text-on-surface-variant',
+  Medium: 'bg-secondary-container text-on-secondary-container',
+  High: 'bg-[#e0e7ff] text-[#3730a3]',
+  Urgent: 'bg-error-container text-on-error-container',
 };
 
 export function PriorityBadge({
@@ -17,7 +17,10 @@ export function PriorityBadge({
   className?: string;
 }) {
   return (
-    <Badge variant="outline" className={cn('text-[11px] font-medium', styles[priority], className)}>
+    <Badge
+      variant="outline"
+      className={cn('border-transparent text-[10px] font-semibold uppercase tracking-wider', styles[priority], className)}
+    >
       {priority}
     </Badge>
   );

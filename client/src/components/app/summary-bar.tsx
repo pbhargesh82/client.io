@@ -1,10 +1,18 @@
 import { cn } from '@/lib/utils';
+import { Icon } from '@/components/ui/icon';
 
 export type SummaryItem = {
   label: string;
-  value: number;
+  value: number | string;
   emphasis?: 'alert';
+  icon: string;
 };
+
+function summaryGridClass(count: number) {
+  if (count <= 1) return '';
+  if (count === 2) return 'sm:grid-cols-2';
+  return 'sm:grid-cols-3';
+}
 
 export function SummaryBar({
   items,
@@ -15,47 +23,48 @@ export function SummaryBar({
   className?: string;
   loading?: boolean;
 }) {
+  const gridClass = summaryGridClass(items.length || 3);
+
   if (loading) {
     return (
       <div
-        className={cn('h-[4.5rem] animate-pulse rounded-lg border bg-muted/30', className)}
+        className={cn('grid grid-cols-1 gap-gutter', gridClass, className)}
         aria-busy="true"
         aria-label="Loading summary"
-      />
+      >
+        {Array.from({ length: items.length || 4 }).map((_, i) => (
+          <div key={i} className="summary-card animate-pulse">
+            <div className="summary-card__icon bg-surface-container-low" />
+            <div className="flex flex-1 flex-col gap-2">
+              <div className="h-3 w-24 rounded bg-surface-container-low" />
+              <div className="h-8 w-12 rounded bg-surface-container-low" />
+            </div>
+          </div>
+        ))}
+      </div>
     );
   }
 
   return (
-    <dl
-      className={cn(
-        'grid grid-cols-2 gap-px overflow-hidden rounded-lg border bg-border sm:grid-cols-4',
-        className
-      )}
-    >
-      {items.map((item, index) => (
-        <div
-          key={item.label}
-          className={cn(
-            'flex flex-col gap-0.5 bg-card px-4 py-3.5',
-            index === 0 && 'rounded-tl-lg sm:rounded-bl-lg',
-            index === 1 && 'rounded-tr-lg sm:rounded-none',
-            index === items.length - 2 && 'sm:rounded-none',
-            index === items.length - 1 && 'rounded-br-lg rounded-bl-lg sm:rounded-tr-lg sm:rounded-bl-none'
-          )}
-        >
-          <dt className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
-            {item.label}
-          </dt>
-          <dd
-            className={cn(
-              'text-2xl font-semibold tabular-nums tracking-tight',
-              item.emphasis === 'alert' && item.value > 0 && 'text-destructive'
-            )}
-          >
-            {item.value}
-          </dd>
-        </div>
-      ))}
+    <dl className={cn('grid grid-cols-1 gap-gutter', gridClass, className)}>
+      {items.map((item) => {
+        const isAlert = item.emphasis === 'alert' && item.value !== 0;
+
+        return (
+          <div key={item.label} className="summary-card">
+            <div className="summary-card__icon">
+              <Icon
+                name={item.icon}
+                className={cn('text-[20px] text-on-surface-variant', isAlert && 'text-error')}
+              />
+            </div>
+            <div className="min-w-0">
+              <dt className="summary-card__label">{item.label}</dt>
+              <dd className={cn('summary-card__value', isAlert && 'text-error')}>{item.value}</dd>
+            </div>
+          </div>
+        );
+      })}
     </dl>
   );
 }

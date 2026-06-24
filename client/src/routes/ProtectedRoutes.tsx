@@ -13,14 +13,15 @@ export function AdminRoute() {
 export function ClientRoute() {
   const { session, role, loading } = useAuth();
   if (loading || (session && !role)) return <LoadingScreen />;
-  if (!session) return <Navigate to="/client/login" replace />;
+  if (!session) return <Navigate to="/login" replace />;
   if (role !== 'client') return <Navigate to="/dashboard" replace />;
   return <Outlet />;
 }
 
-export function GuestRoute({ redirectTo }: { redirectTo: string }) {
+export function GuestRoute() {
   const { session, role, loading } = useAuth();
   if (loading || (session && !role)) return <LoadingScreen />;
-  if (session && role) return <Navigate to={redirectTo} replace />;
+  if (session && role === 'admin') return <Navigate to="/dashboard" replace />;
+  if (session && role === 'client') return <Navigate to="/client/dashboard" replace />;
   return <Outlet />;
 }

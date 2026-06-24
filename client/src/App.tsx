@@ -4,13 +4,12 @@ import { AuthProvider } from './hooks/useAuth';
 import { AdminRoute, ClientRoute, GuestRoute } from './routes/ProtectedRoutes';
 import AdminLayout from './layouts/AdminLayout';
 import ClientLayout from './layouts/ClientLayout';
-import AdminLoginPage from './pages/admin/LoginPage';
+import LoginPage from './pages/LoginPage';
 import AdminDashboardPage from './pages/admin/DashboardPage';
 import ClientsListPage from './pages/admin/ClientsListPage';
-import ClientDetailPage from './pages/admin/ClientDetailPage';
+import ClientLegacyRedirect from './pages/admin/ClientLegacyRedirect';
 import ProjectsListPage from './pages/admin/ProjectsListPage';
 import ProjectDetailPage from './pages/admin/ProjectDetailPage';
-import ClientLoginPage from './pages/client/LoginPage';
 import ClientDashboardPage from './pages/client/DashboardPage';
 import ClientProjectPage from './pages/client/ProjectPage';
 import NotFoundPage from './pages/NotFoundPage';
@@ -29,12 +28,9 @@ export default function App() {
           <Routes>
             <Route path="/" element={<Navigate to="/login" replace />} />
 
-            <Route element={<GuestRoute redirectTo="/dashboard" />}>
-              <Route path="/login" element={<AdminLoginPage />} />
-            </Route>
-
-            <Route element={<GuestRoute redirectTo="/client/dashboard" />}>
-              <Route path="/client/login" element={<ClientLoginPage />} />
+            <Route element={<GuestRoute />}>
+              <Route path="/login" element={<LoginPage />} />
+              <Route path="/client/login" element={<Navigate to="/login" replace />} />
             </Route>
 
             <Route element={<AdminRoute />}>
@@ -42,7 +38,7 @@ export default function App() {
                 <Route path="/dashboard" element={<AdminDashboardPage />} />
                 <Route path="/clients" element={<ClientsListPage />} />
                 <Route path="/clients/new" element={<Navigate to="/clients?create=1" replace />} />
-                <Route path="/clients/:id" element={<ClientDetailPage />} />
+                <Route path="/clients/:id" element={<ClientLegacyRedirect />} />
                 <Route path="/projects" element={<ProjectsListPage />} />
                 <Route path="/projects/new" element={<Navigate to="/projects?create=1" replace />} />
                 <Route path="/projects/:id" element={<ProjectDetailPage />} />

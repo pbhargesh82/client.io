@@ -9,8 +9,7 @@ interface AuthContextValue {
   role: UserRole | null;
   name: string | null;
   loading: boolean;
-  signIn: (email: string, password: string) => Promise<void>;
-  signInWithMagicLink: (email: string) => Promise<void>;
+  signIn: (email: string, password: string) => Promise<UserRole>;
   signOut: () => Promise<void>;
 }
 
@@ -60,20 +59,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => subscription.unsubscribe();
   }, []);
 
-  const signIn = async (email: string, password: string) => {
+  const signIn = async (email: string, password: string): Promise<UserRole> => {
     const { data, error } = await supabase.auth.signInWithPassword({ email, password });
     if (error) throw error;
-    setLoading(true);
-    await applySession(data.session);
-    setLoading(false);
-  };
+    if (!data.session?.user) throw new Error('Login failed');
 
-  const signInWithMagicLink = async (email: string) => {
-    const { error } = await supabase.auth.signInWithOtp({
-      email,
-      options: { emailRedirectTo: window.location.origin },
-    });
-    if (error) throw error;
+    setLoading(true);
+    const { data: profile, error: profileError } = await supabase
+      .from('users')
+      .select('role, name')
+      .eq('id', data.session.user.id)
+      .single();
+
+    if (profileError || !profile?.role) {
+      setLoading(false);
+      throw new Error('Account not found');
+    }
+
+    setSession(data.session);
+    setRole(profile.role as UserRole);
+    setName(profile.name);
+    setLoading(false);
+    return profile.role as UserRole;
   };
 
   const signOut = async () => {
@@ -92,7 +99,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         name,
         loading,
         signIn,
-        signInWithMagicLink,
         signOut,
       }}
     >

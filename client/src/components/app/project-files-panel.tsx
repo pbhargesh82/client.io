@@ -1,9 +1,10 @@
-import { Download, Paperclip, Trash2 } from 'lucide-react';
 import type { ProjectFile } from '@clientspace/shared';
+import { formatRelativeTime } from '@/lib/format';
+import { confirmFileDelete, downloadNamedFile } from '@/lib/files';
 import { EmptyState } from '@/components/app/empty-state';
 import { FileUploadZone } from '@/components/app/file-upload-zone';
 import { Button } from '@/components/ui/button';
-import { ButtonAnchor } from '@/components/ui/button-link';
+import { Icon } from '@/components/ui/icon';
 import { cn } from '@/lib/utils';
 
 export function ProjectFilesPanel({
@@ -18,6 +19,7 @@ export function ProjectFilesPanel({
   uploadLabel = 'Upload file',
   className,
   listClassName,
+  variant = 'default',
 }: {
   files: ProjectFile[];
   canUpload?: boolean;
@@ -30,10 +32,13 @@ export function ProjectFilesPanel({
   uploadLabel?: string;
   className?: string;
   listClassName?: string;
+  variant?: 'default' | 'deliverables';
 }) {
   return (
-    <div className={cn('space-y-4', className)}>
-      <p className="text-[13px] leading-relaxed text-muted-foreground">{description}</p>
+    <div className={cn('space-y-stack-md', className)}>
+      {description && (
+        <p className="font-body-sm text-body-sm text-on-surface-variant">{description}</p>
+      )}
 
       {canUpload && onUpload && (
         <FileUploadZone
@@ -46,7 +51,7 @@ export function ProjectFilesPanel({
 
       {!files.length ? (
         <EmptyState
-          icon={Paperclip}
+          icon="attach_file"
           title="No files yet"
           message={
             canUpload
@@ -56,47 +61,55 @@ export function ProjectFilesPanel({
           className="py-8"
         />
       ) : (
-        <ul
-          className={cn('overflow-hidden rounded-lg border bg-card', listClassName)}
-          role="list"
-        >
-          {files.map((f, i) => (
+        <ul className={cn('flex flex-col gap-unit', listClassName)} role="list">
+          {files.map((f) => (
             <li
               key={f.id}
               className={cn(
-                'flex items-center justify-between gap-2 px-3 py-2.5 transition-colors duration-150 hover:bg-row-hover',
-                i > 0 && 'border-t border-border/80'
+                'group flex items-center justify-between rounded p-unit transition-colors hover:bg-surface-container-low',
+                variant === 'deliverables' && 'cursor-pointer'
               )}
             >
-              <div className="min-w-0 flex-1">
-                <p className="truncate text-[13px] font-medium">{f.name}</p>
-                <p className="text-[11px] text-muted-foreground">
-                  {(f.size_bytes / 1024).toFixed(1)} KB ·{' '}
-                  {new Date(f.created_at).toLocaleDateString()}
-                </p>
+              <div className="flex min-w-0 flex-1 items-center gap-stack-sm">
+                <div className="flex size-8 shrink-0 items-center justify-center rounded bg-tertiary-fixed text-on-tertiary-fixed">
+                  <Icon
+                    name={f.content_type?.includes('pdf') ? 'picture_as_pdf' : 'description'}
+                    className="text-[18px]"
+                  />
+                </div>
+                <div className="min-w-0">
+                  <p className="truncate font-body-sm text-body-sm font-semibold text-on-surface">
+                    {f.name}
+                  </p>
+                  <p className="font-body-sm text-[12px] text-on-surface-variant">
+                    Added <time dateTime={f.created_at}>{formatRelativeTime(f.created_at)}</time>
+                  </p>
+                </div>
               </div>
               <div className="flex shrink-0 items-center gap-0.5">
                 {f.download_url && (
-                  <ButtonAnchor
+                  <Button
+                    type="button"
                     variant="ghost"
                     size="icon-sm"
-                    href={f.download_url}
-                    target="_blank"
-                    rel="noopener noreferrer"
                     aria-label={`Download ${f.name}`}
+                    className="opacity-0 transition-opacity group-hover:opacity-100"
+                    onClick={() => downloadNamedFile(f.download_url!, f.name).catch(() => undefined)}
                   >
-                    <Download className="size-4" />
-                  </ButtonAnchor>
+                    <Icon name="download" className="text-[18px]" />
+                  </Button>
                 )}
                 {canDelete && onDelete && (
                   <Button
                     variant="ghost"
                     size="icon-sm"
-                    className="text-destructive hover:text-destructive"
-                    onClick={() => onDelete(f.id)}
+                    className="text-error hover:text-error"
+                    onClick={() => {
+                      if (confirmFileDelete(f.name)) onDelete(f.id);
+                    }}
                     aria-label={`Delete ${f.name}`}
                   >
-                    <Trash2 className="size-4" />
+                    <Icon name="delete" className="text-[18px]" />
                   </Button>
                 )}
               </div>

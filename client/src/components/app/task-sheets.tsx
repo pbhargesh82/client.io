@@ -22,7 +22,7 @@ import {
   SheetHeader,
   SheetTitle,
 } from '@/components/ui/sheet';
-import { Loader2 } from 'lucide-react';
+import { Icon } from '@/components/ui/icon';
 
 const TASK_STATUSES: TaskStatus[] = ['To Do', 'In Progress', 'Done'];
 const TASK_PRIORITIES: TaskPriority[] = ['Low', 'Medium', 'High', 'Urgent'];
@@ -243,7 +243,7 @@ export function TaskCreateSheet({
           <Button type="button" onClick={submit} disabled={!canSubmit}>
             {pending ? (
               <>
-                <Loader2 className="size-4 animate-spin" aria-hidden />
+                <Icon name="progress_activity" className="animate-spin text-[16px]" />
                 Creating…
               </>
             ) : (
@@ -272,7 +272,7 @@ export function TaskCommentsSheet({
           <SheetTitle className="truncate pr-8">{task?.title ?? 'Comments'}</SheetTitle>
           <SheetDescription>Discussion on this task</SheetDescription>
         </SheetHeader>
-        <div className="min-h-0 flex-1 overflow-y-auto px-5 py-4">
+        <div className="min-h-0 flex-1 overflow-y-auto px-5 py-5 pb-6">
           {task && <TaskComments taskId={task.id} variant="sheet" />}
         </div>
       </SheetContent>
@@ -349,7 +349,7 @@ export function TaskEditSheet({
           <SheetTitle className="pr-8">Edit task</SheetTitle>
           <SheetDescription className="truncate">{task.title}</SheetDescription>
         </SheetHeader>
-        <div className="min-h-0 flex-1 overflow-y-auto px-5 py-5">
+        <div className="min-h-0 flex-1 overflow-y-auto px-5 py-5 pb-6">
           <TaskFormFields
             idPrefix={`edit-task-${task.id}`}
             title={title}
@@ -370,6 +370,14 @@ export function TaskEditSheet({
               {dateWarning}
             </p>
           )}
+
+          <div className="mt-6 border-t border-outline-variant pt-5">
+            <h3 className="mb-3 flex items-center gap-2 font-body-sm text-body-sm font-semibold text-on-surface">
+              <Icon name="forum" className="text-[18px] text-on-surface-variant" />
+              Comments
+            </h3>
+            <TaskComments taskId={task.id} variant="sheet" />
+          </div>
         </div>
         <SheetFooter className="shrink-0 flex-row justify-end gap-2 border-t border-border/80 px-5 py-4">
           <Button type="button" variant="ghost" onClick={() => onOpenChange(false)} disabled={pending}>
@@ -378,7 +386,7 @@ export function TaskEditSheet({
           <Button type="button" onClick={save} disabled={!canSave}>
             {pending ? (
               <>
-                <Loader2 className="size-4 animate-spin" aria-hidden />
+                <Icon name="progress_activity" className="animate-spin text-[16px]" />
                 Saving…
               </>
             ) : (

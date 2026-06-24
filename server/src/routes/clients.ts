@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { supabaseAdmin } from '../lib/supabase.js';
+import { sendClientWelcomeEmail } from '../lib/clientWelcomeEmail.js';
 import { authenticate, requireAdmin } from '../middleware/auth.js';
 
 const router = Router();
@@ -55,6 +56,18 @@ router.post('/', authenticate, requireAdmin, async (req, res) => {
     return res.status(400).json({ error: clientError.message });
   }
 
+  try {
+    await sendClientWelcomeEmail({
+      clientName: name,
+      clientEmail: email,
+      company: company || null,
+      password: tempPassword,
+      invitedByName: req.user?.name ?? null,
+    });
+  } catch (emailError) {
+    console.error('[clients] Failed to send welcome email:', emailError);
+  }
+
   res.status(201).json({ ...client, temp_password: password ? undefined : tempPassword });
 });
 
@@ -79,11 +92,12 @@ router.get('/:id', authenticate, requireAdmin, async (req, res) => {
 });
 
 router.patch('/:id', authenticate, requireAdmin, async (req, res) => {
-  const { name, company, email } = req.body;
+  const { name, company, email, active } = req.body;
   const updates: Record<string, unknown> = {};
   if (name !== undefined) updates.name = name;
   if (company !== undefined) updates.company = company;
   if (email !== undefined) updates.email = email;
+  if (active !== undefined) updates.active = Boolean(active);
 
   const { data, error } = await supabaseAdmin
     .from('clients')

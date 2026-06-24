@@ -73,7 +73,7 @@ router.get('/:id', authenticate, requireAdmin, async (req, res) => {
 });
 
 router.patch('/:id', authenticate, requireAdmin, async (req, res) => {
-  const { title, description, client_id, status, start_date, target_date } = req.body;
+  const { title, description, client_id, status, start_date, target_date, archived } = req.body;
   const updates: Record<string, unknown> = {};
   if (title !== undefined) updates.title = title;
   if (description !== undefined) updates.description = description;
@@ -81,6 +81,7 @@ router.patch('/:id', authenticate, requireAdmin, async (req, res) => {
   if (status !== undefined) updates.status = status;
   if (start_date !== undefined) updates.start_date = start_date;
   if (target_date !== undefined) updates.target_date = target_date;
+  if (archived !== undefined) updates.archived = Boolean(archived);
 
   const { data, error } = await supabaseAdmin
     .from('projects')

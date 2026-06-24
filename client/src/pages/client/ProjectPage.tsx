@@ -1,11 +1,10 @@
 import { useMemo, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { ArrowLeft, ListTodo, Paperclip } from 'lucide-react';
 import { api, apiUpload } from '@/lib/api';
 import type { ProjectDetail, ProjectFile } from '@clientspace/shared';
-import { PageHeader } from '@/components/app/page-header';
-import { StatusBadge } from '@/components/app/status-badge';
+import { useAuth } from '@/hooks/useAuth';
+import { getFirstName, getTimeGreeting } from '@/lib/greeting';
 import { EmptyState } from '@/components/app/empty-state';
 import { PageSkeleton } from '@/components/app/loading';
 import { FormAlert } from '@/components/app/query-error';
@@ -15,17 +14,15 @@ import {
   ProjectSectionTitle,
   ProjectWorkspace,
 } from '@/components/app/project-workspace';
-import { TaskList, TaskRowClient } from '@/components/app/task-row';
-import { TaskCommentsSheet, TaskDetailSheet } from '@/components/app/task-sheets';
-import { ButtonLink } from '@/components/ui/button-link';
-
-type SheetMode = 'details' | 'comments' | null;
+import { ClientTaskTable } from '@/components/app/task-row';
+import { TaskCommentsSheet } from '@/components/app/task-sheets';
 
 export default function ClientProjectPage() {
   const { id } = useParams<{ id: string }>();
+  const { name } = useAuth();
+  const firstName = getFirstName(name);
   const queryClient = useQueryClient();
   const [sheetTaskId, setSheetTaskId] = useState<string | null>(null);
-  const [sheetMode, setSheetMode] = useState<SheetMode>(null);
   const [error, setError] = useState('');
 
   const { data: project, isLoading } = useQuery({
@@ -39,16 +36,6 @@ export default function ClientProjectPage() {
     [project?.tasks, sheetTaskId]
   );
 
-  const openSheet = (taskId: string, mode: Exclude<SheetMode, null>) => {
-    setSheetTaskId(taskId);
-    setSheetMode(mode);
-  };
-
-  const closeSheet = () => {
-    setSheetTaskId(null);
-    setSheetMode(null);
-  };
-
   const uploadFile = useMutation({
     mutationFn: (file: File) => apiUpload<ProjectFile>(`/projects/${id}/files`, file),
     onSuccess: () => {
@@ -61,60 +48,42 @@ export default function ClientProjectPage() {
   if (isLoading) return <PageSkeleton rows={6} />;
   if (!project) return <EmptyState message="Project not found" />;
 
-  const taskCount = project.tasks?.length ?? 0;
-  const fileCount = project.files?.length ?? 0;
+  const tasks = project.tasks ?? [];
+  const files = project.files ?? [];
 
   return (
     <div className="page-stack">
-      <PageHeader title={project.title}>
-        <ButtonLink variant="outline" to="/client/dashboard">
-          <ArrowLeft className="size-4" /> Back
-        </ButtonLink>
-      </PageHeader>
+      <section>
+        <h1 className="mb-unit font-display text-display text-on-surface">
+          {firstName ? `${getTimeGreeting()}, ${firstName}.` : getTimeGreeting()}
+        </h1>
+        <p className="font-body-lg text-body-lg text-on-surface-variant">
+          Here's your project status for {project.title}.
+        </p>
+      </section>
 
       {error && <FormAlert message={error} />}
 
-      <div className="flex flex-wrap items-center gap-3">
-        <StatusBadge status={project.status} />
-        {project.target_date && (
-          <span className="text-[13px] text-muted-foreground">
-            Target {new Date(project.target_date).toLocaleDateString()}
-          </span>
-        )}
-      </div>
-
-      {project.description && (
-        <p className="max-w-prose text-[13px] leading-relaxed text-muted-foreground">
-          {project.description}
-        </p>
-      )}
-
-      <ProjectJumpNav taskCount={taskCount} fileCount={fileCount} />
+      <ProjectJumpNav taskCount={tasks.length} fileCount={files.length} />
 
       <ProjectWorkspace
         tasks={
           <section aria-labelledby="client-project-tasks-heading">
             <ProjectSectionTitle
               id="client-project-tasks-heading"
-              icon={ListTodo}
+              icon="task"
               title="Tasks"
-              count={taskCount}
+              count={tasks.length}
             />
 
-            {!project.tasks?.length ? (
-              <EmptyState icon={ListTodo} message="No tasks yet." className="py-8" />
+            {!tasks.length ? (
+              <EmptyState icon="task" message="No tasks yet." className="py-8" />
             ) : (
-              <TaskList variant="client">
-                {project.tasks.map((task) => (
-                  <TaskRowClient
-                    key={task.id}
-                    task={task}
-                    active={sheetTaskId === task.id}
-                    onView={() => openSheet(task.id, 'details')}
-                    onComments={() => openSheet(task.id, 'comments')}
-                  />
-                ))}
-              </TaskList>
+              <ClientTaskTable
+                tasks={tasks}
+                activeTaskId={sheetTaskId}
+                onTaskClick={(taskId) => setSheetTaskId(taskId)}
+              />
             )}
           </section>
         }
@@ -122,18 +91,13 @@ export default function ClientProjectPage() {
           <section aria-labelledby="client-project-files-heading">
             <ProjectSectionTitle
               id="client-project-files-heading"
-              icon={Paperclip}
+              icon="attach_file"
               title="Files"
-              count={fileCount}
+              count={files.length}
               className="hidden lg:flex"
             />
-            <h2 className="mb-4 flex items-center gap-2 text-sm font-semibold tracking-tight lg:hidden">
-              <Paperclip className="size-4 text-muted-foreground" aria-hidden />
-              Files
-              <span className="font-normal text-muted-foreground">({fileCount})</span>
-            </h2>
             <ProjectFilesPanel
-              files={project.files ?? []}
+              files={files}
               canUpload
               uploading={uploadFile.isPending}
               uploadError={
@@ -146,24 +110,16 @@ export default function ClientProjectPage() {
               onUpload={(f) => uploadFile.mutateAsync(f)}
               description="Official project deliverables and documents."
               uploadLabel="Upload a file"
+              variant="deliverables"
             />
           </section>
         }
       />
 
-      <TaskDetailSheet
-        task={sheetTask}
-        open={sheetMode === 'details'}
-        onOpenChange={(open) => !open && closeSheet()}
-        onOpenComments={() => {
-          if (sheetTask) openSheet(sheetTask.id, 'comments');
-        }}
-      />
-
       <TaskCommentsSheet
         task={sheetTask}
-        open={sheetMode === 'comments'}
-        onOpenChange={(open) => !open && closeSheet()}
+        open={!!sheetTaskId}
+        onOpenChange={(open) => !open && setSheetTaskId(null)}
       />
     </div>
   );

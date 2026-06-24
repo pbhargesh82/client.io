@@ -13,7 +13,7 @@ import {
   MAX_ATTACHMENTS,
   formatFileSize,
 } from '@/components/app/comment-attachments';
-import { Paperclip, X } from 'lucide-react';
+import { Icon } from '@/components/ui/icon';
 import { cn } from '@/lib/utils';
 
 function commentInitials(name?: string | null): string {
@@ -63,7 +63,7 @@ function PendingFilePreview({ file, onRemove }: { file: File; onRemove: () => vo
           onClick={onRemove}
           aria-label={`Remove ${file.name}`}
         >
-          <X className="size-3.5" />
+          <Icon name="close" className="text-[14px]" />
         </Button>
       </div>
     </li>
@@ -185,12 +185,20 @@ export function TaskComments({
 
   return (
     <section
-      className={cn(!embedded && !isSheet && 'mt-4 border-t border-border/80 pt-5')}
+      className={cn(
+        !embedded && !isSheet && 'mt-4 border-t border-border/80 pt-5',
+        isSheet && 'pb-2'
+      )}
       aria-label="Task comments"
     >
-      <div className={cn(embedded || isSheet ? 'space-y-4' : 'mb-5')}>
+      <div
+        className={cn(
+          'flex flex-col',
+          embedded || isSheet ? 'gap-4' : 'mb-5 gap-5'
+        )}
+      >
         {!embedded && !isSheet && (
-          <div className="mb-3 flex items-baseline justify-between gap-2">
+          <div className="flex items-baseline justify-between gap-2">
             <h3 className="text-[13px] font-semibold tracking-tight">
               Comments
               {commentCount > 0 && (
@@ -223,14 +231,13 @@ export function TaskComments({
             ))}
           </ul>
         )}
-      </div>
 
-      <div
-        className={cn(
-          'rounded-lg border border-border/80 p-4',
-          embedded || isSheet ? 'bg-background' : 'bg-muted/20'
-        )}
-      >
+        <div
+          className={cn(
+            'rounded-lg border border-border/80 bg-background p-4',
+            !embedded && !isSheet && 'bg-muted/20'
+          )}
+        >
         <p className="mb-3 text-[12px] font-medium text-muted-foreground">Add a comment</p>
         <form
           onSubmit={(e) => {
@@ -269,7 +276,7 @@ export function TaskComments({
               aria-label="Attach files"
             >
               <span className="relative flex">
-                <Paperclip className="size-4" />
+                <Icon name="attach_file" className="text-[16px]" />
                 {pendingFiles.length > 0 && (
                   <span className="absolute -right-2 -top-2 flex size-4 items-center justify-center rounded-full bg-primary text-[10px] font-semibold text-primary-foreground">
                     {pendingFiles.length}
@@ -312,6 +319,7 @@ export function TaskComments({
             </p>
           )}
         </form>
+        </div>
       </div>
     </section>
   );

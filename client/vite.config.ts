@@ -16,9 +16,7 @@ export default defineConfig({
   },
   optimizeDeps: {
     include: [
-      'lucide-react',
       'sonner',
-      'next-themes',
       'class-variance-authority',
       'clsx',
       'tailwind-merge',

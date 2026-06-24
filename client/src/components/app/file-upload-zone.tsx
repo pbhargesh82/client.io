@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react';
-import { CheckCircle2, Upload } from 'lucide-react';
+import { Icon } from '@/components/ui/icon';
 import { cn } from '@/lib/utils';
 
 export function FileUploadZone({
@@ -42,28 +42,28 @@ export function FileUploadZone({
       <label
         htmlFor="project-file-upload"
         className={cn(
-          'flex cursor-pointer flex-col items-center justify-center rounded-lg border border-dashed px-6 py-10 transition-colors duration-150',
+          'flex cursor-pointer flex-col items-center justify-center rounded border border-dashed px-6 py-10 transition-colors duration-150',
           justUploaded
-            ? 'border-emerald-500/50 bg-emerald-500/5'
+            ? 'border-[#166534]/50 bg-[#dcfce7]/30'
             : error
-              ? 'border-destructive/40 bg-destructive/5'
-              : 'border-muted-foreground/30 bg-muted/20 hover:border-primary/40 hover:bg-muted/40',
+              ? 'border-error/40 bg-error-container/30'
+              : 'border-outline-variant bg-surface-container-low hover:border-action/40 hover:bg-surface-container',
           uploading && 'pointer-events-none opacity-60'
         )}
       >
         {justUploaded ? (
-          <CheckCircle2 className="mb-2 size-8 text-emerald-600" aria-hidden />
+          <Icon name="check_circle" className="mb-2 text-[32px] text-[#166534]" />
         ) : (
-          <Upload className="mb-2 size-8 text-muted-foreground" aria-hidden />
+          <Icon name="upload" className="mb-2 text-[32px] text-on-surface-variant" />
         )}
-        <span className="text-[13px] font-medium">
+        <span className="font-body-sm text-body-sm font-semibold">
           {uploading
             ? `Uploading ${selectedName ?? 'file'}…`
             : justUploaded
               ? 'Upload complete'
               : label}
         </span>
-        <span className="mt-1 text-[12px] text-muted-foreground">
+        <span className="mt-1 font-body-sm text-[12px] text-on-surface-variant">
           PDF, images, documents up to 50 MB
         </span>
         <input
@@ -77,7 +77,7 @@ export function FileUploadZone({
         />
       </label>
       {error && (
-        <p className="mt-2 text-[12px] text-destructive" role="alert">
+        <p className="mt-2 font-body-sm text-[12px] text-error" role="alert">
           {error}
         </p>
       )}

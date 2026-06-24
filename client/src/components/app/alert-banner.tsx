@@ -14,9 +14,9 @@ export function AlertBanner({
     <div
       role="status"
       className={cn(
-        'rounded-lg border px-4 py-3 text-[13px] leading-relaxed',
-        variant === 'destructive' && 'border-destructive/25 bg-destructive/5 text-foreground',
-        variant === 'info' && 'border-primary/20 bg-primary/5 text-foreground',
+        'rounded border px-4 py-3 font-body-sm text-body-sm',
+        variant === 'destructive' && 'border-error/25 bg-error-container/30 text-on-surface',
+        variant === 'info' && 'border-outline-variant bg-secondary-container/50 text-on-surface',
         className
       )}
     >

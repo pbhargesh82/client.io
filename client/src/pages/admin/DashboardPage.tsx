@@ -1,34 +1,31 @@
 import { Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import {
-  Plus,
-  ChevronRight,
-  MessageSquare,
-  Upload,
-  ListTodo,
-  Activity,
-  FolderKanban,
-  ArrowRight,
-} from 'lucide-react';
 import { api } from '@/lib/api';
 import { formatRelativeTime } from '@/lib/format';
 import { getFirstName, getTimeGreeting } from '@/lib/greeting';
 import type { DashboardStats, ActivityItem, Project } from '@clientspace/shared';
 import { useAuth } from '@/hooks/useAuth';
 import { EmptyState } from '@/components/app/empty-state';
-import { Panel } from '@/components/app/panel';
 import { QueryError } from '@/components/app/query-error';
 import { SummaryBar } from '@/components/app/summary-bar';
 import { AlertBanner } from '@/components/app/alert-banner';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ButtonLink } from '@/components/ui/button-link';
 import { StatusBadge } from '@/components/app/status-badge';
-import type { LucideIcon } from 'lucide-react';
+import { Icon } from '@/components/ui/icon';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
 
-const activityMeta: Record<ActivityItem['type'], { icon: LucideIcon }> = {
-  task_updated: { icon: ListTodo },
-  file_uploaded: { icon: Upload },
-  comment_added: { icon: MessageSquare },
+const activityTypeLabel: Record<ActivityItem['type'], string> = {
+  task_updated: 'In Progress',
+  file_uploaded: 'Completed',
+  comment_added: 'In Progress',
 };
 
 export default function AdminDashboardPage() {
@@ -54,6 +51,19 @@ export default function AdminDashboardPage() {
   const stats = statsQuery.data;
   const projects = projectsQuery.data ?? [];
   const overdue = stats?.overdue_tasks ?? 0;
+  const reviewProjects = projects.filter((p) => p.status === 'Review');
+  const attentionItems = [
+    ...reviewProjects.map((p) => ({
+      id: p.id,
+      title: p.title,
+      subtitle: `${p.clients?.name} — awaiting review`,
+      badge: 'Review',
+      badgeClass: 'bg-secondary-container text-on-secondary-container',
+      to: `/projects/${p.id}`,
+      time: 'Needs review',
+    })),
+  ].slice(0, 5);
+
   const isEmptyWorkspace =
     !statsQuery.isLoading &&
     !statsQuery.isError &&
@@ -62,28 +72,25 @@ export default function AdminDashboardPage() {
 
   return (
     <div className="page-stack">
-      <header className="flex flex-col gap-4 border-b border-border/80 pb-8 sm:flex-row sm:items-start sm:justify-between">
-        <div className="min-w-0 space-y-1">
-          <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Overview</p>
-          <h1>{firstName ? `${greeting}, ${firstName}` : greeting}</h1>
-          <p className="max-w-xl text-[13px] leading-relaxed text-muted-foreground md:text-sm">
-            {overdue > 0
-              ? `${overdue} overdue task${overdue === 1 ? '' : 's'} need attention.`
-              : isEmptyWorkspace
-                ? 'Add a client and project to start tracking work.'
-                : 'Recent updates across your clients and projects.'}
+      <section className="mb-stack-lg flex flex-col gap-stack-md sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <h1 className="font-display text-display text-on-surface mb-unit">
+            {firstName ? `${greeting}, ${firstName}.` : 'Overview'}
+          </h1>
+          <p className="font-body-lg text-body-lg text-on-surface-variant">
+            Here's what's happening across your workspace today.
           </p>
         </div>
-        <div className="flex shrink-0 flex-wrap items-center gap-2">
+        <div className="flex shrink-0 gap-2">
           <ButtonLink variant="outline" to="/clients?create=1">
             Add client
           </ButtonLink>
-          <ButtonLink to="/projects?create=1">
-            <Plus className="size-4" aria-hidden />
+          <ButtonLink to="/projects?create=1" className="gap-2">
+            <Icon name="add" className="text-[18px]" />
             New project
           </ButtonLink>
         </div>
-      </header>
+      </section>
 
       {statsQuery.isError ? (
         <QueryError message="Could not load summary. Refresh to try again." />
@@ -91,35 +98,35 @@ export default function AdminDashboardPage() {
         <SummaryBar
           loading={statsQuery.isLoading}
           items={[
-            { label: 'active clients', value: stats?.active_clients ?? 0 },
-            { label: 'active projects', value: stats?.active_projects ?? 0 },
-            { label: 'due this week', value: stats?.tasks_due_this_week ?? 0 },
-            { label: 'overdue', value: overdue, emphasis: 'alert' },
+            { label: 'Active clients', value: stats?.active_clients ?? 0, icon: 'group' },
+            { label: 'Active projects', value: stats?.active_projects ?? 0, icon: 'folder_open' },
+            { label: 'Due this week', value: stats?.tasks_due_this_week ?? 0, icon: 'schedule' },
+            { label: 'Overdue tasks', value: overdue, emphasis: 'alert', icon: 'warning' },
           ]}
         />
       )}
 
       {overdue > 0 && !statsQuery.isLoading && (
         <AlertBanner variant="destructive">
-          <span className="font-medium text-destructive">
+          <span className="font-semibold text-error">
             {overdue} overdue task{overdue === 1 ? '' : 's'}
-          </span>
-          {' '}— open a project and review tasks to get back on track.
+          </span>{' '}
+          — open a project and review tasks to get back on track.
         </AlertBanner>
       )}
 
       {isEmptyWorkspace && (
         <AlertBanner variant="info">
-          <p className="font-medium">Get started in two steps</p>
-          <ol className="mt-2 list-inside list-decimal space-y-1 text-muted-foreground">
+          <p className="font-semibold">Get started in two steps</p>
+          <ol className="mt-2 list-inside list-decimal space-y-1 text-on-surface-variant">
             <li>
-              <ButtonLink variant="link" className="h-auto p-0 text-[13px]" to="/clients?create=1">
+              <ButtonLink variant="link" className="h-auto p-0" to="/clients?create=1">
                 Add a client
               </ButtonLink>{' '}
               and share portal access
             </li>
             <li>
-              <ButtonLink variant="link" className="h-auto p-0 text-[13px]" to="/projects?create=1">
+              <ButtonLink variant="link" className="h-auto p-0" to="/projects?create=1">
                 Create a project
               </ButtonLink>{' '}
               with tasks and files
@@ -128,123 +135,143 @@ export default function AdminDashboardPage() {
         </AlertBanner>
       )}
 
-      <div className="grid gap-6 xl:grid-cols-5">
-        <Panel title="Recent activity" titleId="recent-activity-heading" className="xl:col-span-3">
-          {activityQuery.isError ? (
-            <QueryError message="Could not load activity." />
-          ) : activityQuery.isLoading ? (
-            <div className="space-y-3" aria-busy="true">
-              {Array.from({ length: 5 }).map((_, i) => (
-                <Skeleton key={i} className="h-11 rounded-md" />
-              ))}
-            </div>
-          ) : !activityQuery.data?.length ? (
-            <EmptyState
-              icon={Activity}
-              title="No activity yet"
-              message="Task updates, file uploads, and comments will appear here."
-              className="py-10"
-            />
-          ) : (
-            <ul className="divide-y divide-border">
-              {activityQuery.data.map((item) => {
-                const Icon = activityMeta[item.type].icon;
-                return (
-                  <li key={item.id}>
-                    <Link
-                      to={`/projects/${item.project_id}`}
-                      className="group flex gap-3 px-1 py-3 interactive-row first:pt-0 last:pb-0"
-                    >
-                      <span className="mt-0.5 flex size-7 shrink-0 items-center justify-center rounded-md bg-muted text-muted-foreground group-hover:bg-background">
-                        <Icon className="size-3.5" aria-hidden />
-                      </span>
-                      <span className="min-w-0 flex-1">
-                        <span className="block text-[13px] font-medium leading-snug">
-                          {item.description}
-                        </span>
-                        <span className="mt-0.5 block text-[13px] text-muted-foreground">
-                          {item.project_title}
-                          <span aria-hidden> · </span>
-                          <time dateTime={item.created_at}>
-                            {formatRelativeTime(item.created_at)}
-                          </time>
-                        </span>
-                      </span>
-                      <ChevronRight
-                        className="mt-1 size-4 shrink-0 text-muted-foreground/40 transition-transform duration-150 group-hover:translate-x-0.5 group-hover:text-muted-foreground"
-                        aria-hidden
-                      />
-                    </Link>
-                  </li>
-                );
-              })}
-            </ul>
-          )}
-        </Panel>
-
-        <Panel
-          title="Active projects"
-          titleId="active-projects-heading"
-          className="xl:col-span-2"
-          action={
-            projects.length > 0 ? (
-              <Link
-                to="/projects"
-                className="inline-flex items-center gap-1 rounded-sm text-[13px] font-medium text-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-              >
-                View all
-                <ArrowRight className="size-3.5" aria-hidden />
-              </Link>
-            ) : undefined
-          }
-        >
-          {projectsQuery.isError ? (
-            <QueryError message="Could not load projects." />
-          ) : projectsQuery.isLoading ? (
-            <div className="space-y-1" aria-busy="true">
-              {Array.from({ length: 5 }).map((_, i) => (
-                <Skeleton key={i} className="h-12 rounded-md" />
-              ))}
-            </div>
-          ) : !projects.length ? (
-            <EmptyState
-              icon={FolderKanban}
-              title="No projects yet"
-              message="Create a project and assign it to a client."
-              className="py-10"
-              action={
-                <ButtonLink size="sm" to="/projects?create=1">
-                  Create project
-                </ButtonLink>
-              }
-            />
-          ) : (
-            <ul className="-mx-1">
-              {projects.slice(0, 6).map((p) => (
-                <li key={p.id}>
+      <div className="mb-stack-lg grid grid-cols-1 gap-gutter md:grid-cols-12">
+        <div className="card-surface flex h-full flex-col overflow-hidden md:col-span-4">
+          <div className="flex items-center justify-between border-b border-outline-variant bg-surface-bright p-stack-sm">
+            <h3 className="font-headline-md text-body-lg font-semibold text-on-surface">
+              Needs Attention
+            </h3>
+          </div>
+          <div className="flex flex-1 flex-col gap-unit overflow-y-auto p-stack-sm">
+            {overdue === 0 && attentionItems.length === 0 ? (
+              <p className="py-4 text-center font-body-sm text-body-sm text-on-surface-variant">
+                Nothing needs attention right now.
+              </p>
+            ) : (
+              <>
+                {overdue > 0 && (
                   <Link
-                    to={`/projects/${p.id}`}
-                    className="group flex items-center justify-between gap-3 px-3 py-3 interactive-row"
+                    to="/projects"
+                    className="group cursor-pointer rounded-lg p-unit outline-none hover:bg-surface-container-low focus-visible:ring-2 focus-visible:ring-action"
                   >
-                    <span className="min-w-0">
-                      <span className="block truncate text-[13px] font-medium">{p.title}</span>
-                      <span className="block truncate text-[13px] text-muted-foreground">
-                        {p.clients?.name}
+                    <div className="mb-1 flex items-start justify-between">
+                      <span className="font-body-sm text-body-sm font-semibold text-on-surface group-hover:text-primary">
+                        Overdue tasks
                       </span>
-                    </span>
-                    <span className="flex shrink-0 items-center gap-2">
-                      <StatusBadge status={p.status} />
-                      <ChevronRight
-                        className="size-4 text-muted-foreground/40 transition-transform duration-150 group-hover:translate-x-0.5 group-hover:text-muted-foreground"
-                        aria-hidden
-                      />
+                      <span className="inline-flex items-center rounded px-1.5 py-0.5 text-[10px] font-semibold tracking-wider uppercase bg-error-container text-on-error-container">
+                        Overdue
+                      </span>
+                    </div>
+                    <p className="font-body-sm text-body-sm text-on-surface-variant">
+                      {overdue} task{overdue === 1 ? '' : 's'} past due date
+                    </p>
+                  </Link>
+                )}
+                {attentionItems.map((item) => (
+                  <Link
+                    key={item.id}
+                    to={item.to}
+                    className="group cursor-pointer rounded-lg p-unit outline-none hover:bg-surface-container-low focus-visible:ring-2 focus-visible:ring-action"
+                  >
+                    <div className="mb-1 flex items-start justify-between">
+                      <span className="font-body-sm text-body-sm font-semibold text-on-surface group-hover:text-primary">
+                        {item.title}
+                      </span>
+                      <span
+                        className={`inline-flex items-center rounded px-1.5 py-0.5 text-[10px] font-semibold tracking-wider uppercase ${item.badgeClass}`}
+                      >
+                        {item.badge}
+                      </span>
+                    </div>
+                    <p className="truncate font-body-sm text-body-sm text-on-surface-variant">
+                      {item.subtitle}
+                    </p>
+                    <span className="mt-2 block font-label-caps text-[10px] text-outline">
+                      {item.time}
                     </span>
                   </Link>
-                </li>
-              ))}
-            </ul>
+                ))}
+              </>
+            )}
+          </div>
+          {(overdue > 0 || attentionItems.length > 0) && (
+            <div className="border-t border-outline-variant bg-surface-bright p-stack-sm">
+              <Link
+                to="/projects"
+                className="block w-full text-center font-body-sm text-body-sm font-semibold text-on-surface-variant hover:text-primary focus-ring rounded-sm"
+              >
+                View all projects
+              </Link>
+            </div>
           )}
-        </Panel>
+        </div>
+
+        <div className="md:col-span-8">
+          <div className="card-surface overflow-hidden">
+            <div className="flex items-center justify-between border-b border-outline-variant bg-surface-bright p-stack-md">
+              <h3 className="font-headline-md text-headline-md text-on-surface">Recent Activity</h3>
+            </div>
+            {activityQuery.isError ? (
+              <div className="p-stack-md">
+                <QueryError message="Could not load activity." />
+              </div>
+            ) : activityQuery.isLoading ? (
+              <div className="space-y-3 p-stack-md" aria-busy="true">
+                {Array.from({ length: 5 }).map((_, i) => (
+                  <Skeleton key={i} className="h-11 rounded" />
+                ))}
+              </div>
+            ) : !activityQuery.data?.length ? (
+              <EmptyState
+                icon="monitoring"
+                title="No activity yet"
+                message="Task updates, file uploads, and comments will appear here."
+                className="py-10"
+              />
+            ) : (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Client / Project</TableHead>
+                    <TableHead>Update</TableHead>
+                    <TableHead>Date</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead className="text-right">Action</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {activityQuery.data.map((item) => (
+                    <TableRow key={item.id} className="group">
+                      <TableCell>
+                        <div className="font-semibold transition-colors group-hover:text-primary">
+                          {item.project_title}
+                        </div>
+                      </TableCell>
+                      <TableCell className="whitespace-normal">{item.description}</TableCell>
+                      <TableCell className="font-data-mono text-data-mono text-on-surface-variant">
+                        <time dateTime={item.created_at}>
+                          {formatRelativeTime(item.created_at)}
+                        </time>
+                      </TableCell>
+                      <TableCell>
+                        <StatusBadge status={activityTypeLabel[item.type]} />
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <Link
+                          to={`/projects/${item.project_id}`}
+                          aria-label="View details"
+                          className="text-on-surface-variant hover:text-primary focus-ring rounded-sm"
+                        >
+                          <Icon name="chevron_right" />
+                        </Link>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            )}
+          </div>
+        </div>
       </div>
     </div>
   );

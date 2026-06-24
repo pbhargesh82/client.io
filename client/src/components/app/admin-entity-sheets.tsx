@@ -1,9 +1,12 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Check, Copy, Loader2 } from 'lucide-react';
+import { Icon } from '@/components/ui/icon';
 import { api } from '@/lib/api';
 import type { Client, ClientWithProjects, Project, ProjectDetail, ProjectStatus } from '@clientspace/shared';
+import { StatusBadge } from '@/components/app/status-badge';
+import { ListLinkRow } from '@/components/app/list-link-row';
+import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -148,7 +151,7 @@ export function ClientCreateSheet({
             <Button type="submit" disabled={!canSubmit}>
               {mutation.isPending ? (
                 <>
-                  <Loader2 className="size-4 animate-spin" aria-hidden />
+                  <Icon name="progress_activity" className="animate-spin text-[16px]" />
                   Creating…
                 </>
               ) : (
@@ -202,7 +205,7 @@ export function ClientCredentialsSheet({
         </div>
         <SheetFooter className="shrink-0 flex-row justify-end gap-2 border-t border-border/80 px-5 py-4">
           <Button type="button" variant="outline" onClick={copyCredentials}>
-            {copied ? <Check className="size-4" /> : <Copy className="size-4" />}
+            {copied ? <Icon name="check" className="text-[16px]" /> : <Icon name="content_copy" className="text-[16px]" />}
             {copied ? 'Copied' : 'Copy credentials'}
           </Button>
           <Button type="button" onClick={() => onOpenChange(false)}>
@@ -214,114 +217,223 @@ export function ClientCredentialsSheet({
   );
 }
 
-export function ClientEditSheet({
-  client,
+export function ClientManageSheet({
+  clientId,
   open,
   onOpenChange,
-  onUpdated,
 }: {
-  client: ClientWithProjects | null;
+  clientId: string | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onUpdated?: () => void;
 }) {
   const queryClient = useQueryClient();
   const [name, setName] = useState('');
   const [company, setCompany] = useState('');
   const [email, setEmail] = useState('');
+  const [active, setActive] = useState(true);
   const [error, setError] = useState('');
+  const [createProjectOpen, setCreateProjectOpen] = useState(false);
+
+  const { data: client, isLoading, isError } = useQuery({
+    queryKey: ['clients', clientId],
+    queryFn: () => api<ClientWithProjects>(`/clients/${clientId}`),
+    enabled: open && !!clientId,
+  });
 
   useEffect(() => {
     if (client && open) {
       setName(client.name);
       setCompany(client.company || '');
       setEmail(client.email);
+      setActive(client.active);
       setError('');
     }
   }, [client, open]);
 
-  const mutation = useMutation({
+  const saveMutation = useMutation({
     mutationFn: () =>
-      api(`/clients/${client!.id}`, {
+      api(`/clients/${clientId}`, {
         method: 'PATCH',
-        body: JSON.stringify({ name, company, email }),
+        body: JSON.stringify({ name, company, email, active }),
       }),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['clients', client!.id] });
+      queryClient.invalidateQueries({ queryKey: ['clients', clientId] });
       queryClient.invalidateQueries({ queryKey: ['clients'] });
-      onUpdated?.();
-      onOpenChange(false);
     },
     onError: (err) => setError(err instanceof Error ? err.message : 'Update failed'),
   });
 
-  const canSave = name.trim() && email.trim() && !mutation.isPending;
-
-  if (!client) {
-    return (
-      <Sheet open={open} onOpenChange={onOpenChange}>
-        <SheetContent className="sm:max-w-md" />
-      </Sheet>
-    );
-  }
+  const canSave = !!client && name.trim() && email.trim() && !saveMutation.isPending;
 
   return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className="flex w-full flex-col gap-0 p-0 sm:max-w-md">
-        <SheetHeader className="shrink-0 border-b border-border/80 px-5 py-4 text-left">
-          <SheetTitle className="pr-8">Edit client</SheetTitle>
-          <SheetDescription className="truncate">{client.name}</SheetDescription>
-        </SheetHeader>
-        <form
-          className="flex min-h-0 flex-1 flex-col"
-          onSubmit={(e) => {
-            e.preventDefault();
-            if (canSave) mutation.mutate();
+    <>
+      <Sheet open={open} onOpenChange={onOpenChange}>
+        <SheetContent className="flex w-full flex-col gap-0 p-0 sm:max-w-md">
+          <SheetHeader className="shrink-0 border-b border-border/80 px-5 py-4 text-left">
+            <div className="flex items-start justify-between gap-3 pr-8">
+              <div className="min-w-0">
+                <SheetTitle className="truncate">{client?.name ?? 'Client'}</SheetTitle>
+                <SheetDescription className="truncate">{client?.email}</SheetDescription>
+              </div>
+              {client && <StatusBadge status={active ? 'Active' : 'Inactive'} />}
+            </div>
+          </SheetHeader>
+
+          {isLoading ? (
+            <div className="flex flex-1 items-center justify-center px-5 py-12">
+              <Icon name="progress_activity" className="animate-spin text-[24px] text-on-surface-variant" />
+            </div>
+          ) : isError || !client ? (
+            <div className="px-5 py-8 text-center font-body-sm text-body-sm text-on-surface-variant">
+              Could not load client. Close and try again.
+            </div>
+          ) : (
+            <form
+              className="flex min-h-0 flex-1 flex-col"
+              onSubmit={(e) => {
+                e.preventDefault();
+                if (canSave) saveMutation.mutate();
+              }}
+            >
+              <div className="min-h-0 flex-1 space-y-6 overflow-y-auto px-5 py-5">
+                <div className="space-y-4">
+                  <div className="space-y-1.5">
+                    <Label htmlFor="manage-client-name">Name</Label>
+                    <Input
+                      id="manage-client-name"
+                      value={name}
+                      onChange={(e) => setName(e.target.value)}
+                      required
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="manage-client-company">Company</Label>
+                    <Input
+                      id="manage-client-company"
+                      value={company}
+                      onChange={(e) => setCompany(e.target.value)}
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="manage-client-email">Email</Label>
+                    <Input
+                      id="manage-client-email"
+                      type="email"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      required
+                    />
+                  </div>
+                  <div className="flex items-center justify-between gap-4 rounded-lg border border-outline-variant bg-surface-container-low px-4 py-3">
+                    <div className="min-w-0">
+                      <Label htmlFor="manage-client-active" className="font-body-sm text-body-sm font-semibold">
+                        Portal access
+                      </Label>
+                      <p className="mt-0.5 font-body-sm text-[13px] text-on-surface-variant">
+                        {active
+                          ? 'Client can sign in to the portal.'
+                          : 'Client cannot sign in until reactivated.'}
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      id="manage-client-active"
+                      role="switch"
+                      aria-checked={active}
+                      aria-label={active ? 'Deactivate portal access' : 'Activate portal access'}
+                      onClick={() => setActive((value) => !value)}
+                      className={cn(
+                        'relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-action focus-visible:ring-offset-2',
+                        active ? 'bg-primary' : 'bg-outline-variant'
+                      )}
+                    >
+                      <span
+                        className={cn(
+                          'inline-block size-5 rounded-full bg-white shadow transition-transform',
+                          active ? 'translate-x-[22px]' : 'translate-x-0.5'
+                        )}
+                      />
+                    </button>
+                  </div>
+                  {error && (
+                    <p className="text-[13px] text-destructive" role="alert">
+                      {error}
+                    </p>
+                  )}
+                </div>
+
+                <div className="border-t border-outline-variant pt-5">
+                  <div className="mb-3 flex items-center justify-between gap-2">
+                    <h3 className="font-body-sm text-body-sm font-semibold text-on-surface">Projects</h3>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setCreateProjectOpen(true)}
+                      className="gap-1.5"
+                    >
+                      <Icon name="add" className="text-[16px]" />
+                      New project
+                    </Button>
+                  </div>
+                  {!client.projects?.length ? (
+                    <p className="font-body-sm text-body-sm text-on-surface-variant">
+                      No projects for this client yet.
+                    </p>
+                  ) : (
+                    <ul className="-mx-2 divide-y divide-outline-variant rounded-lg border border-outline-variant">
+                      {client.projects.map((p) => (
+                        <li key={p.id}>
+                          <ListLinkRow
+                            to={`/projects/${p.id}`}
+                            title={p.title}
+                            subtitle={p.description || undefined}
+                            trailing={<StatusBadge status={p.status} />}
+                            className="rounded-none"
+                          />
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+              </div>
+
+              <SheetFooter className="shrink-0 flex-row justify-end gap-2 border-t border-border/80 px-5 py-4">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  onClick={() => onOpenChange(false)}
+                  disabled={saveMutation.isPending}
+                >
+                  Close
+                </Button>
+                <Button type="submit" disabled={!canSave}>
+                    {saveMutation.isPending ? (
+                      <>
+                        <Icon name="progress_activity" className="animate-spin text-[16px]" />
+                        Saving…
+                      </>
+                    ) : (
+                      'Save changes'
+                    )}
+                  </Button>
+              </SheetFooter>
+            </form>
+          )}
+        </SheetContent>
+      </Sheet>
+
+      {client && (
+        <ProjectCreateSheet
+          open={createProjectOpen}
+          onOpenChange={setCreateProjectOpen}
+          defaultClientId={client.id}
+          onCreated={() => {
+            queryClient.invalidateQueries({ queryKey: ['clients', client.id] });
           }}
-        >
-          <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-5 py-5">
-            <div className="space-y-1.5">
-              <Label htmlFor="edit-client-name">Name</Label>
-              <Input id="edit-client-name" value={name} onChange={(e) => setName(e.target.value)} required />
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="edit-client-company">Company</Label>
-              <Input id="edit-client-company" value={company} onChange={(e) => setCompany(e.target.value)} />
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="edit-client-email">Email</Label>
-              <Input
-                id="edit-client-email"
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-              />
-            </div>
-            {error && (
-              <p className="text-[13px] text-destructive" role="alert">
-                {error}
-              </p>
-            )}
-          </div>
-          <SheetFooter className="shrink-0 flex-row justify-end gap-2 border-t border-border/80 px-5 py-4">
-            <Button type="button" variant="ghost" onClick={() => onOpenChange(false)} disabled={mutation.isPending}>
-              Cancel
-            </Button>
-            <Button type="submit" disabled={!canSave}>
-              {mutation.isPending ? (
-                <>
-                  <Loader2 className="size-4 animate-spin" aria-hidden />
-                  Saving…
-                </>
-              ) : (
-                'Save changes'
-              )}
-            </Button>
-          </SheetFooter>
-        </form>
-      </SheetContent>
-    </Sheet>
+        />
+      )}
+    </>
   );
 }
 
@@ -482,7 +594,7 @@ export function ProjectCreateSheet({
             <Button type="submit" disabled={!canSubmit}>
               {mutation.isPending ? (
                 <>
-                  <Loader2 className="size-4 animate-spin" aria-hidden />
+                  <Icon name="progress_activity" className="animate-spin text-[16px]" />
                   Creating…
                 </>
               ) : (
@@ -500,14 +612,10 @@ export function ProjectEditSheet({
   project,
   open,
   onOpenChange,
-  onArchive,
-  archiving,
 }: {
   project: ProjectDetail | Project | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onArchive?: () => void;
-  archiving?: boolean;
 }) {
   const queryClient = useQueryClient();
   const [title, setTitle] = useState('');
@@ -515,6 +623,7 @@ export function ProjectEditSheet({
   const [status, setStatus] = useState<ProjectStatus>('Planning');
   const [startDate, setStartDate] = useState('');
   const [targetDate, setTargetDate] = useState('');
+  const [archived, setArchived] = useState(false);
   const [error, setError] = useState('');
 
   useEffect(() => {
@@ -524,6 +633,7 @@ export function ProjectEditSheet({
       setStatus(project.status);
       setStartDate(project.start_date || '');
       setTargetDate(project.target_date || '');
+      setArchived(project.archived);
       setError('');
     }
   }, [project, open]);
@@ -550,6 +660,7 @@ export function ProjectEditSheet({
     if (status !== project.status) updates.status = status;
     if (startDate !== (project.start_date || '')) updates.start_date = startDate || null;
     if (targetDate !== (project.target_date || '')) updates.target_date = targetDate || null;
+    if (archived !== project.archived) updates.archived = archived;
 
     if (Object.keys(updates).length > 0) mutation.mutate(updates);
     else onOpenChange(false);
@@ -621,39 +732,57 @@ export function ProjectEditSheet({
               />
             </div>
           </div>
+          <div className="flex items-center justify-between gap-4 rounded-lg border border-outline-variant bg-surface-container-low px-4 py-3">
+            <div className="min-w-0">
+              <Label htmlFor="edit-project-archived" className="font-body-sm text-body-sm font-semibold">
+                Archived
+              </Label>
+              <p className="mt-0.5 font-body-sm text-[13px] text-on-surface-variant">
+                {archived
+                  ? 'Hidden from the client portal and active project lists.'
+                  : 'Visible to the client and included in active project lists.'}
+              </p>
+            </div>
+            <button
+              type="button"
+              id="edit-project-archived"
+              role="switch"
+              aria-checked={archived}
+              aria-label={archived ? 'Unarchive project' : 'Archive project'}
+              onClick={() => setArchived((value) => !value)}
+              className={cn(
+                'relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-action focus-visible:ring-offset-2',
+                archived ? 'bg-primary' : 'bg-outline-variant'
+              )}
+            >
+              <span
+                className={cn(
+                  'inline-block size-5 rounded-full bg-white shadow transition-transform',
+                  archived ? 'translate-x-[22px]' : 'translate-x-0.5'
+                )}
+              />
+            </button>
+          </div>
           {error && (
             <p className="text-[13px] text-destructive" role="alert">
               {error}
             </p>
           )}
         </div>
-        <SheetFooter className="shrink-0 flex-col gap-2 border-t border-border/80 px-5 py-4 sm:flex-row sm:justify-between">
-          {!project.archived && onArchive && (
-            <Button
-              type="button"
-              variant="destructive"
-              onClick={onArchive}
-              disabled={archiving || mutation.isPending}
-              className="sm:mr-auto"
-            >
-              Archive project
-            </Button>
-          )}
-          <div className="flex justify-end gap-2 sm:ml-auto">
-            <Button type="button" variant="ghost" onClick={() => onOpenChange(false)} disabled={mutation.isPending}>
-              Cancel
-            </Button>
-            <Button type="button" onClick={save} disabled={!canSave}>
-              {mutation.isPending ? (
-                <>
-                  <Loader2 className="size-4 animate-spin" aria-hidden />
-                  Saving…
-                </>
-              ) : (
-                'Save changes'
-              )}
-            </Button>
-          </div>
+        <SheetFooter className="shrink-0 flex-row justify-end gap-2 border-t border-border/80 px-5 py-4">
+          <Button type="button" variant="ghost" onClick={() => onOpenChange(false)} disabled={mutation.isPending}>
+            Cancel
+          </Button>
+          <Button type="button" onClick={save} disabled={!canSave}>
+            {mutation.isPending ? (
+              <>
+                <Icon name="progress_activity" className="animate-spin text-[16px]" />
+                Saving…
+              </>
+            ) : (
+              'Save changes'
+            )}
+          </Button>
         </SheetFooter>
       </SheetContent>
     </Sheet>

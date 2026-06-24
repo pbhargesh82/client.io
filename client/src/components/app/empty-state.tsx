@@ -1,14 +1,14 @@
-import type { LucideIcon } from 'lucide-react';
+import { Icon } from '@/components/ui/icon';
 import { cn } from '@/lib/utils';
 
 export function EmptyState({
-  icon: Icon,
+  icon,
   title,
   message,
   action,
   className,
 }: {
-  icon?: LucideIcon;
+  icon?: string;
   title?: string;
   message: string;
   action?: React.ReactNode;
@@ -16,13 +16,15 @@ export function EmptyState({
 }) {
   return (
     <div className={cn('flex flex-col items-center py-14 text-center', className)}>
-      {Icon && (
-        <div className="mb-4 flex size-11 items-center justify-center rounded-lg border border-dashed border-border bg-muted/40">
-          <Icon className="size-[18px] text-muted-foreground" strokeWidth={1.75} />
+      {icon && (
+        <div className="mb-4 flex size-11 items-center justify-center rounded border border-dashed border-outline-variant bg-surface-container-low">
+          <Icon name={icon} className="text-[20px] text-on-surface-variant" />
         </div>
       )}
-      {title && <p className="text-sm font-semibold tracking-tight">{title}</p>}
-      <p className="mt-1.5 max-w-sm text-[13px] leading-relaxed text-muted-foreground">{message}</p>
+      {title && (
+        <p className="font-body-md text-body-md font-semibold text-on-surface">{title}</p>
+      )}
+      <p className="mt-1.5 max-w-sm font-body-sm text-body-sm text-on-surface-variant">{message}</p>
       {action && <div className="mt-5">{action}</div>}
     </div>
   );
