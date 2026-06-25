@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useEffect, useRef, useState } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { QueryError } from '@/components/app/query-error';
 import { Button } from '@/components/ui/button';
@@ -7,20 +7,38 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Icon } from '@/components/ui/icon';
 
+function readDemoCredentials(searchParams: URLSearchParams) {
+  const email = searchParams.get('email')?.trim();
+  const password = searchParams.get('password');
+  if (!email || !password) return null;
+  return { email, password };
+}
+
 export default function LoginPage() {
   const { signIn } = useAuth();
   const navigate = useNavigate();
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [error, setError] = useState('');
-  const [loading, setLoading] = useState(false);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const demoAttempted = useRef(false);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const demoCredentials = readDemoCredentials(searchParams);
+  const [email, setEmail] = useState(() => searchParams.get('email')?.trim() ?? '');
+  const [password, setPassword] = useState(() => searchParams.get('password') ?? '');
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(() => !!demoCredentials);
+
+  const clearDemoParams = () => {
+    if (!searchParams.has('email') && !searchParams.has('password')) return;
+    const next = new URLSearchParams(searchParams);
+    next.delete('email');
+    next.delete('password');
+    setSearchParams(next, { replace: true });
+  };
+
+  const signInAndRedirect = async (emailValue: string, passwordValue: string) => {
     setError('');
     setLoading(true);
     try {
-      const role = await signIn(email, password);
+      const role = await signIn(emailValue, passwordValue);
       const destination = role === 'admin' ? '/dashboard' : '/client/dashboard';
       navigate(destination, { replace: true });
     } catch (err) {
@@ -28,6 +46,21 @@ export default function LoginPage() {
     } finally {
       setLoading(false);
     }
+  };
+
+  useEffect(() => {
+    const emailParam = searchParams.get('email')?.trim();
+    const passwordParam = searchParams.get('password');
+    if (!emailParam || !passwordParam || demoAttempted.current) return;
+
+    demoAttempted.current = true;
+    clearDemoParams();
+    void signInAndRedirect(emailParam, passwordParam);
+  }, [searchParams]);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    await signInAndRedirect(email, password);
   };
 
   return (
